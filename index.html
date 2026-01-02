@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Hue Hunter | Cloud Sync</title>
+    <title>Hue Hunter | Ranking</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -27,10 +27,10 @@
                     <button id="btn-google-login" class="btn-start" onclick="login()">Googleでログイン</button>
                     <button id="btn-guest" class="btn-look" onclick="continueAsGuest()">ログインせずに遊ぶ</button>
                     
-                    <button id="btn-show-ranking" class="btn-ranking-toggle" onclick="toggleStartRanking()">🏆 世界ランキングを表示</button>
+                    <button id="btn-show-ranking" class="btn-ranking-toggle" onclick="toggleStartRanking()">🏆 ランキングを表示</button>
 
                     <div id="start-ranking-container" class="ranking-box" style="display:none;">
-                        <div class="ranking-header">WORLD TOP 5</div>
+                        <div class="ranking-header">RANKING TOP 5</div>
                         <div id="start-ranking-list" class="ranking-list-text">Loading...</div>
                     </div>
 
@@ -46,13 +46,13 @@
         </div>
 
         <div id="result-overlay">
-            <div id="new-record-label" style="display:none;">★ NEW WORLD RECORD ★</div>
+            <div id="new-record-label" style="display:none;">★ NEW RECORD ★</div>
             <div id="res-rank" class="rank-name">---</div>
             <div id="res-msg" class="msg-text">---</div>
 
             <div id="ranking-container" class="ranking-box">
                 <div id="ranking-header-res" class="ranking-header">
-                    <span>WORLD TOP 5</span>
+                    <span>RANKING TOP 5</span>
                     <span id="login-status-res" style="font-size:0.6rem;">---</span>
                 </div>
                 <div id="ranking-list" class="ranking-list-text">Loading rankings...</div>
@@ -101,6 +101,8 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        
+        // グローバルにFirebase関数を登録
         window.fb = { auth, db, GoogleAuthProvider, signInWithPopup, collection, doc, setDoc, getDoc, query, orderBy, limit, getDocs, serverTimestamp };
 
         onAuthStateChanged(auth, (user) => {
