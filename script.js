@@ -12,18 +12,21 @@ const state = {
     isGuest: false
 };
 
-// --- Auth (リダイレクト方式 & 待機ロジック) ---
+// --- Auth (リダイレクト・404回避ロジック) ---
 
 async function login() {
     if (!window.fb) return;
     const provider = new window.fb.GoogleAuthProvider();
+    // アカウント選択画面を強制的に出す設定（確実にリダイレクトを走らせる）
+    provider.setCustomParameters({ prompt: 'select_account' });
+
     try {
         const loginBtn = document.getElementById('btn-google-login');
         if (loginBtn) {
             loginBtn.innerText = "ログイン中...";
             loginBtn.disabled = true;
         }
-        // リダイレクト方式でログイン開始
+        // GitHub Pagesではポップアップよりリダイレクトが安定します
         await window.fb.signInWithRedirect(window.fb.auth, provider);
     } catch (e) { 
         console.error("Login initiation failed", e);
@@ -39,21 +42,8 @@ function resetLoginBtn() {
     }
 }
 
-async function checkRedirectResult() {
-    if (!window.fb) return;
-    try {
-        const result = await window.fb.getRedirectResult(window.fb.auth);
-        if (result && result.user) {
-            console.log("Redirect login success");
-            handleLoginSuccess(result.user);
-        }
-    } catch (e) {
-        console.error("Redirect login error", e);
-        resetLoginBtn();
-    }
-}
-
 function handleLoginSuccess(user) {
+    if (state.user) return; // 重複処理防止
     state.user = user;
     state.isGuest = false;
     
@@ -72,31 +62,6 @@ function handleLoginSuccess(user) {
 
     // クラウドからベストスコアを同期
     syncCloudRecord();
-}
-
-async function syncCloudRecord() {
-    if (!state.user || !window.fb) return;
-    try {
-        const docRef = window.fb.doc(window.fb.db, "rankings", state.user.uid);
-        const docSnap = await window.fb.getDoc(docRef);
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data.score > state.bestScore) {
-                state.bestScore = data.score;
-                localStorage.setItem(STORAGE_KEY, state.bestScore);
-            }
-        }
-    } catch (e) { console.error("Sync error:", e); }
-}
-
-function continueAsGuest() {
-    state.isGuest = true;
-    state.user = null;
-    const loginOptions = document.getElementById('login-options');
-    const setupUi = document.getElementById('setup-ui');
-    if (loginOptions) loginOptions.style.display = 'none';
-    if (setupUi) setupUi.style.display = 'flex';
-    document.getElementById('welcome-msg').innerText = "Guest Mode";
 }
 
 // --- Game Logic ---
@@ -144,9 +109,8 @@ function handleIncorrect() {
     if (state.score > localBest) {
         state.bestScore = state.score;
         localStorage.setItem(STORAGE_KEY, state.score);
-    } else {
-        state.bestScore = localBest;
-    }
+    } else { state.bestScore = localBest; }
+
     document.querySelectorAll('.block').forEach(b => b.classList.add('fade-out'));
     const target = document.getElementById('target');
     if (target) { target.classList.remove('fade-out'); target.classList.add('correct-answer'); }
@@ -154,7 +118,7 @@ function handleIncorrect() {
     setTimeout(() => displayResultUI(), 800);
 }
 
-// --- Result & UI ---
+// --- Result & Ranking ---
 
 function displayResultUI() {
     state.isPeeking = false;
@@ -165,10 +129,8 @@ function displayResultUI() {
 
     const newLabel = document.getElementById('new-record-label');
     if (newLabel) {
-        if (state.score >= finalBest && state.score > 0) {
-            newLabel.style.display = 'block';
-            createFirework();
-        } else { newLabel.style.display = 'none'; }
+        newLabel.style.display = (state.score >= finalBest && state.score > 0) ? 'block' : 'none';
+        if (state.score >= finalBest && state.score > 0) createFirework();
     }
     
     document.getElementById('guest-login-notice').style.display = (!state.user) ? 'block' : 'none';
@@ -219,6 +181,23 @@ async function loadWorldRanking() {
     } catch (e) { console.error("Load error:", e); }
 }
 
+async function syncCloudRecord() {
+    if (!state.user || !window.fb) return;
+    try {
+        const docRef = window.fb.doc(window.fb.db, "rankings", state.user.uid);
+        const docSnap = await window.fb.getDoc(docRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.score > state.bestScore) {
+                state.bestScore = data.score;
+                localStorage.setItem(STORAGE_KEY, state.bestScore);
+            }
+        }
+    } catch (e) { console.error("Sync error:", e); }
+}
+
+// --- Utils ---
+
 function getRankInfo(score) {
     if (score >= 100) return { rank: "👁️‍🗨️ 神の目", msg: "真理の到達者。色彩の深淵を見通す、神の領域。" };
     if (score >= 90)  return { rank: "🌌 色彩の特異点", msg: "デバイスの限界を超え、色の法則を書き換えた。" };
@@ -230,7 +209,34 @@ function getRankInfo(score) {
     return { rank: "🚶 一般市民", msg: "まだ見ぬ色彩が君を待っている。" };
 }
 
-// --- UI Helpers ---
+function createFirework() {
+    for (let i = 0; i < 30; i++) {
+        const p = document.createElement('div');
+        document.body.appendChild(p);
+        const x = window.innerWidth / 2, y = window.innerHeight / 2;
+        p.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:6px;height:6px;background:hsl(${Math.random()*360},100%,60%);border-radius:50%;z-index:3000;pointer-events:none;`;
+        const angle = Math.random()*Math.PI*2, v = Math.random()*10+5;
+        let vx = Math.cos(angle)*v, vy = Math.sin(angle)*v, op = 1;
+        const anim = () => {
+            vx *= 0.96; vy += 0.25;
+            p.style.left = (parseFloat(p.style.left)+vx)+'px'; p.style.top = (parseFloat(p.style.top)+vy)+'px';
+            op -= 0.02; p.style.opacity = op;
+            if (op > 0) requestAnimationFrame(anim); else p.remove();
+        };
+        requestAnimationFrame(anim);
+    }
+}
+
+// --- Init & Controllers ---
+
+function continueAsGuest() {
+    state.isGuest = true;
+    const loginOptions = document.getElementById('login-options');
+    const setupUi = document.getElementById('setup-ui');
+    if (loginOptions) loginOptions.style.display = 'none';
+    if (setupUi) setupUi.style.display = 'flex';
+    document.getElementById('welcome-msg').innerText = "Guest Mode";
+}
 
 function toggleStartRanking() {
     const container = document.getElementById('start-ranking-container');
@@ -259,24 +265,6 @@ function peekBoard() {
     setTimeout(() => { document.getElementById('result-overlay').style.display = 'none'; document.getElementById('back-to-result').classList.add('visible'); }, 300);
 }
 
-function createFirework() {
-    for (let i = 0; i < 30; i++) {
-        const p = document.createElement('div');
-        document.body.appendChild(p);
-        const x = window.innerWidth / 2, y = window.innerHeight / 2;
-        p.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:6px;height:6px;background:hsl(${Math.random()*360},100%,60%);border-radius:50%;z-index:3000;pointer-events:none;`;
-        const angle = Math.random()*Math.PI*2, v = Math.random()*10+5;
-        let vx = Math.cos(angle)*v, vy = Math.sin(angle)*v, op = 1;
-        const anim = () => {
-            vx *= 0.96; vy += 0.25;
-            p.style.left = (parseFloat(p.style.left)+vx)+'px'; p.style.top = (parseFloat(p.style.top)+vy)+'px';
-            op -= 0.02; p.style.opacity = op;
-            if (op > 0) requestAnimationFrame(anim); else p.remove();
-        };
-        requestAnimationFrame(anim);
-    }
-}
-
 window.login = login;
 window.continueAsGuest = continueAsGuest;
 window.startGame = startGame;
@@ -290,19 +278,22 @@ function initRanking() {
         const loginBtn = document.getElementById('btn-google-login');
         if (loginBtn) loginBtn.innerText = "認証情報を確認中...";
 
-        // ログイン状態の確定を監視
+        // 画像の404エラーを飛び越えて、ブラウザ内の認証変化を直接キャッチする
         window.fb.onAuthStateChanged(window.fb.auth, (user) => {
             if (user) {
                 handleLoginSuccess(user);
             } else {
-                setTimeout(() => { if (!window.fb.auth.currentUser) resetLoginBtn(); }, 1500);
+                // 戻ってきた直後は検証に時間がかかるため、2秒待ってダメならボタンを戻す
+                setTimeout(() => { if (!window.fb.auth.currentUser) resetLoginBtn(); }, 2000);
             }
         });
 
-        checkRedirectResult();
+        // 明示的にリダイレクト結果を拾う（404エラーが出てもバックグラウンドで処理される場合がある）
+        window.fb.getRedirectResult(window.fb.auth).then((result) => {
+            if (result && result.user) handleLoginSuccess(result.user);
+        }).catch((e) => console.log("Catching potential redirect artifact:", e.message));
+
         loadWorldRanking(); 
-    } else { 
-        setTimeout(initRanking, 500); 
-    } 
+    } else { setTimeout(initRanking, 500); } 
 }
 initRanking();
