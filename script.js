@@ -1,4 +1,3 @@
-// キーを v6 に変更して記録をリセット
 const STORAGE_KEY = 'hueHunter_v6_best';
 const NAME_KEY = 'hueHunter_v6_name';
 
@@ -12,21 +11,15 @@ const state = {
     isGuest: false
 };
 
-// --- Auth (リダイレクト・404回避ロジック) ---
+// --- Auth ---
 
 async function login() {
     if (!window.fb) return;
     const provider = new window.fb.GoogleAuthProvider();
-    // アカウント選択画面を強制的に出す設定（確実にリダイレクトを走らせる）
     provider.setCustomParameters({ prompt: 'select_account' });
-
     try {
         const loginBtn = document.getElementById('btn-google-login');
-        if (loginBtn) {
-            loginBtn.innerText = "ログイン中...";
-            loginBtn.disabled = true;
-        }
-        // GitHub Pagesではポップアップよりリダイレクトが安定します
+        if (loginBtn) { loginBtn.innerText = "ログイン中..."; loginBtn.disabled = true; }
         await window.fb.signInWithRedirect(window.fb.auth, provider);
     } catch (e) { 
         console.error("Login initiation failed", e);
@@ -36,31 +29,21 @@ async function login() {
 
 function resetLoginBtn() {
     const loginBtn = document.getElementById('btn-google-login');
-    if (loginBtn) {
-        loginBtn.innerText = "Googleでログイン";
-        loginBtn.disabled = false;
-    }
+    if (loginBtn) { loginBtn.innerText = "Googleでログイン"; loginBtn.disabled = false; }
 }
 
 function handleLoginSuccess(user) {
-    if (state.user) return; // 重複処理防止
+    if (state.user) return;
     state.user = user;
     state.isGuest = false;
-    
-    // UIを名前入力画面に切り替え
-    const loginOptions = document.getElementById('login-options');
-    const setupUi = document.getElementById('setup-ui');
-    if (loginOptions) loginOptions.style.display = 'none';
-    if (setupUi) setupUi.style.display = 'flex';
-    
-    const welcomeMsg = document.getElementById('welcome-msg');
-    if (welcomeMsg) welcomeMsg.innerText = `Hello, ${user.displayName}`;
-    
+    document.getElementById('login-options').style.display = 'none';
+    document.getElementById('setup-ui').style.display = 'flex';
+    document.getElementById('welcome-msg').innerText = `Hello, ${user.displayName}`;
     const savedName = localStorage.getItem(NAME_KEY);
-    const nameInput = document.getElementById('display-name');
-    if (savedName && nameInput) nameInput.value = savedName;
-
-    // クラウドからベストスコアを同期
+    if(savedName) document.getElementById('display-name').value = savedName;
+    
+    const statusEl = document.getElementById('login-status-res');
+    if (statusEl) { statusEl.innerText = "Logged In"; statusEl.style.color = "#4CAF50"; }
     syncCloudRecord();
 }
 
@@ -84,7 +67,6 @@ function renderGame() {
     let m = (h >= 80 && h <= 165) ? 1.8 : (h >= 166 && h <= 210) ? 1.3 : (h >= 211 && h <= 280) ? 1.2 : 1.0;
     const d = state.currentDiff * m;
     const correctIndex = Math.floor(Math.random() * 25);
-
     for (let i = 0; i < 25; i++) {
         const block = document.createElement('div');
         block.className = 'block';
@@ -110,7 +92,6 @@ function handleIncorrect() {
         state.bestScore = state.score;
         localStorage.setItem(STORAGE_KEY, state.score);
     } else { state.bestScore = localBest; }
-
     document.querySelectorAll('.block').forEach(b => b.classList.add('fade-out'));
     const target = document.getElementById('target');
     if (target) { target.classList.remove('fade-out'); target.classList.add('correct-answer'); }
@@ -118,38 +99,34 @@ function handleIncorrect() {
     setTimeout(() => displayResultUI(), 800);
 }
 
-// --- Result & Ranking ---
-
 function displayResultUI() {
     state.isPeeking = false;
-    const overlay = document.getElementById('result-overlay');
     const finalBest = parseInt(localStorage.getItem(STORAGE_KEY)) || state.score;
     document.getElementById('res-score').innerText = state.score;
     document.getElementById('res-best').innerText = finalBest;
-
     const newLabel = document.getElementById('new-record-label');
     if (newLabel) {
         newLabel.style.display = (state.score >= finalBest && state.score > 0) ? 'block' : 'none';
         if (state.score >= finalBest && state.score > 0) createFirework();
     }
-    
     document.getElementById('guest-login-notice').style.display = (!state.user) ? 'block' : 'none';
     loadWorldRanking();
-    
     const info = getRankInfo(state.score);
     document.getElementById('res-rank').innerText = info.rank;
     document.getElementById('res-msg').innerText = info.msg;
-    overlay.style.display = 'flex';
-    setTimeout(() => overlay.classList.add('visible'), 50);
+    document.getElementById('result-overlay').style.display = 'flex';
+    setTimeout(() => document.getElementById('result-overlay').classList.add('visible'), 50);
 }
+
+// --- Ranking & Cloud ---
 
 async function saveWorldRecord() {
     if (!state.user || !window.fb) return;
-    const playerName = localStorage.getItem(NAME_KEY) || "Unknown";
-    const bestToSave = parseInt(localStorage.getItem(STORAGE_KEY)) || state.score;
+    const name = localStorage.getItem(NAME_KEY) || "Unknown";
+    const best = parseInt(localStorage.getItem(STORAGE_KEY)) || state.score;
     try {
         const docRef = window.fb.doc(window.fb.db, "rankings", state.user.uid);
-        await window.fb.setDoc(docRef, { name: playerName, score: bestToSave, timestamp: window.fb.serverTimestamp() }, { merge: true });
+        await window.fb.setDoc(docRef, { name, score: best, timestamp: window.fb.serverTimestamp() }, { merge: true });
     } catch (e) { console.error("Save error", e); }
 }
 
@@ -158,7 +135,7 @@ async function loadWorldRanking() {
     try {
         const q = window.fb.query(window.fb.collection(window.fb.db, "rankings"), window.fb.orderBy("score", "desc"), window.fb.limit(10));
         const snap = await window.fb.getDocs(q);
-        let html = ""; let rank = 1; let myRankData = null;
+        let html = ""; let rank = 1; let myRank = null;
         snap.forEach(doc => {
             const data = doc.data();
             const isMe = state.user && doc.id === state.user.uid;
@@ -168,17 +145,16 @@ async function loadWorldRanking() {
                             <span>${data.score}</span>
                          </div>`;
             }
-            if (isMe) myRankData = { rank, score: data.score, name: data.name };
+            if (isMe) myRank = { rank, score: data.score, name: data.name };
             rank++;
         });
-        if (myRankData && myRankData.rank > 5) {
-            html += `<div style="border-top: 1px dashed rgba(255,255,255,0.3); margin: 8px 0; padding-top: 8px;"></div>
-                     <div style="display:flex; justify-content:space-between; color:var(--accent-color); font-weight:bold;"><span>${myRankData.rank}. ${myRankData.name} (You)</span><span>${myRankData.score}</span></div>`;
+        if (myRank && myRank.rank > 5) {
+            html += `<div style="border-top:1px dashed rgba(255,255,255,0.3); margin:8px 0; padding-top:8px;"></div>
+                     <div style="display:flex; justify-content:space-between; color:var(--accent-color); font-weight:bold;"><span>${myRank.rank}. ${myRank.name} (You)</span><span>${myRank.score}</span></div>`;
         }
         document.getElementById('ranking-list').innerHTML = html || "No records";
-        const startRanking = document.getElementById('start-ranking-list');
-        if (startRanking) startRanking.innerHTML = html || "No records";
-    } catch (e) { console.error("Load error:", e); }
+        if (document.getElementById('start-ranking-list')) document.getElementById('start-ranking-list').innerHTML = html || "No records";
+    } catch (e) { console.error("Load error", e); }
 }
 
 async function syncCloudRecord() {
@@ -196,8 +172,6 @@ async function syncCloudRecord() {
     } catch (e) { console.error("Sync error:", e); }
 }
 
-// --- Utils ---
-
 function getRankInfo(score) {
     if (score >= 100) return { rank: "👁️‍🗨️ 神の目", msg: "真理の到達者。色彩の深淵を見通す、神の領域。" };
     if (score >= 90)  return { rank: "🌌 色彩の特異点", msg: "デバイスの限界を超え、色の法則を書き換えた。" };
@@ -209,32 +183,12 @@ function getRankInfo(score) {
     return { rank: "🚶 一般市民", msg: "まだ見ぬ色彩が君を待っている。" };
 }
 
-function createFirework() {
-    for (let i = 0; i < 30; i++) {
-        const p = document.createElement('div');
-        document.body.appendChild(p);
-        const x = window.innerWidth / 2, y = window.innerHeight / 2;
-        p.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:6px;height:6px;background:hsl(${Math.random()*360},100%,60%);border-radius:50%;z-index:3000;pointer-events:none;`;
-        const angle = Math.random()*Math.PI*2, v = Math.random()*10+5;
-        let vx = Math.cos(angle)*v, vy = Math.sin(angle)*v, op = 1;
-        const anim = () => {
-            vx *= 0.96; vy += 0.25;
-            p.style.left = (parseFloat(p.style.left)+vx)+'px'; p.style.top = (parseFloat(p.style.top)+vy)+'px';
-            op -= 0.02; p.style.opacity = op;
-            if (op > 0) requestAnimationFrame(anim); else p.remove();
-        };
-        requestAnimationFrame(anim);
-    }
-}
-
-// --- Init & Controllers ---
+// --- Controllers ---
 
 function continueAsGuest() {
     state.isGuest = true;
-    const loginOptions = document.getElementById('login-options');
-    const setupUi = document.getElementById('setup-ui');
-    if (loginOptions) loginOptions.style.display = 'none';
-    if (setupUi) setupUi.style.display = 'flex';
+    document.getElementById('login-options').style.display = 'none';
+    document.getElementById('setup-ui').style.display = 'flex';
     document.getElementById('welcome-msg').innerText = "Guest Mode";
 }
 
@@ -265,6 +219,24 @@ function peekBoard() {
     setTimeout(() => { document.getElementById('result-overlay').style.display = 'none'; document.getElementById('back-to-result').classList.add('visible'); }, 300);
 }
 
+function createFirework() {
+    for (let i = 0; i < 30; i++) {
+        const p = document.createElement('div');
+        document.body.appendChild(p);
+        const x = window.innerWidth / 2, y = window.innerHeight / 2;
+        p.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:6px;height:6px;background:hsl(${Math.random()*360},100%,60%);border-radius:50%;z-index:3000;pointer-events:none;`;
+        const angle = Math.random()*Math.PI*2, v = Math.random()*10+5;
+        let vx = Math.cos(angle)*v, vy = Math.sin(angle)*v, op = 1;
+        const anim = () => {
+            vx *= 0.96; vy += 0.25;
+            p.style.left = (parseFloat(p.style.left)+vx)+'px'; p.style.top = (parseFloat(p.style.top)+vy)+'px';
+            op -= 0.02; p.style.opacity = op;
+            if (op > 0) requestAnimationFrame(anim); else p.remove();
+        };
+        requestAnimationFrame(anim);
+    }
+}
+
 window.login = login;
 window.continueAsGuest = continueAsGuest;
 window.startGame = startGame;
@@ -275,24 +247,14 @@ window.showResult = () => { state.isPeeking = false; document.getElementById('ba
 
 function initRanking() { 
     if (window.fb && window.fb.auth) { 
-        const loginBtn = document.getElementById('btn-google-login');
-        if (loginBtn) loginBtn.innerText = "認証情報を確認中...";
-
-        // 画像の404エラーを飛び越えて、ブラウザ内の認証変化を直接キャッチする
+        document.getElementById('btn-google-login').innerText = "認証情報を確認中...";
         window.fb.onAuthStateChanged(window.fb.auth, (user) => {
-            if (user) {
-                handleLoginSuccess(user);
-            } else {
-                // 戻ってきた直後は検証に時間がかかるため、2秒待ってダメならボタンを戻す
-                setTimeout(() => { if (!window.fb.auth.currentUser) resetLoginBtn(); }, 2000);
-            }
+            if (user) { handleLoginSuccess(user); } 
+            else { setTimeout(() => { if (!window.fb.auth.currentUser) resetLoginBtn(); }, 2000); }
         });
-
-        // 明示的にリダイレクト結果を拾う（404エラーが出てもバックグラウンドで処理される場合がある）
         window.fb.getRedirectResult(window.fb.auth).then((result) => {
             if (result && result.user) handleLoginSuccess(result.user);
-        }).catch((e) => console.log("Catching potential redirect artifact:", e.message));
-
+        }).catch((e) => console.log("Handled redirect behavior"));
         loadWorldRanking(); 
     } else { setTimeout(initRanking, 500); } 
 }
