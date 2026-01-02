@@ -1,5 +1,6 @@
-const STORAGE_KEY = 'hueHunter_v1.0.1_best';
-const NAME_KEY = 'hueHunter_v1.0.1_name';
+// バージョンを更新（キャッシュ対策）
+const STORAGE_KEY = 'hueHunter_v1.0.2_best';
+const NAME_KEY = 'hueHunter_v1.0.2_name';
 
 const state = {
     score: 0,
@@ -11,37 +12,35 @@ const state = {
     isGuest: false
 };
 
-// --- Auth (Persistence & Redirect) ---
+// --- Auth (ポップアップ方式・強化版) ---
 
 async function login() {
     if (!window.fb) return;
     const provider = new window.fb.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
 
-    try {
-        const loginBtn = document.getElementById('btn-google-login');
-        if (loginBtn) {
-            loginBtn.innerText = "ログイン中...";
-            loginBtn.disabled = true;
-        }
-
-        // ★重要: ログイン情報を「ローカルストレージ」に強制保存する設定
-        await window.fb.setPersistence(window.fb.auth, window.fb.browserLocalPersistence);
-        
-        // その後リダイレクト
-        await window.fb.signInWithRedirect(window.fb.auth, provider);
-    } catch (e) { 
-        console.error("Login initiation failed", e);
-        alert("ログインエラー: " + e.message); // エラーが見えるようにアラートを出す
-        resetLoginBtn();
-    }
-}
-
-function resetLoginBtn() {
     const loginBtn = document.getElementById('btn-google-login');
     if (loginBtn) {
-        loginBtn.innerText = "Googleでログイン";
-        loginBtn.disabled = false;
+        loginBtn.innerText = "ログイン画面を開いています...";
+        loginBtn.disabled = true;
+    }
+
+    try {
+        // ★ リダイレクトではなく「ポップアップ」を使用
+        // Safari等の「他サイト追跡防止」機能の影響を受けにくい
+        await window.fb.signInWithPopup(window.fb.auth, provider);
+        
+        // ポップアップが閉じたらここに来る
+        console.log("Popup finished");
+        
+    } catch (e) { 
+        console.error("Popup login error or closed:", e);
+        // COOPエラー等はここでキャッチされるが、
+        // onAuthStateChanged が動けば問題ないので無視してボタンを戻す
+        if (loginBtn) {
+            loginBtn.innerText = "Googleでログイン";
+            loginBtn.disabled = false;
+        }
     }
 }
 
@@ -50,6 +49,7 @@ function handleLoginSuccess(user) {
     state.user = user;
     state.isGuest = false;
     
+    // UI切り替え
     const loginOptions = document.getElementById('login-options');
     const setupUi = document.getElementById('setup-ui');
     if (loginOptions) loginOptions.style.display = 'none';
@@ -293,24 +293,16 @@ window.showResult = () => { state.isPeeking = false; document.getElementById('ba
 
 function initRanking() { 
     if (window.fb && window.fb.auth) { 
-        const loginBtn = document.getElementById('btn-google-login');
-        if (loginBtn) loginBtn.innerText = "認証情報を確認中...";
-
-        // 監視ロジック
+        
+        // ログイン状態が変わるのを常に監視（これが最強です）
         window.fb.onAuthStateChanged(window.fb.auth, (user) => {
             if (user) {
+                // ポップアップが成功していればここに来ます
                 handleLoginSuccess(user);
             } else {
-                // 3秒待ってもダメならボタンを復活
-                setTimeout(() => { 
-                    if (!window.fb.auth.currentUser) resetLoginBtn(); 
-                }, 3000);
+                // ログアウト状態
             }
         });
-
-        window.fb.getRedirectResult(window.fb.auth).then((result) => {
-            if (result && result.user) handleLoginSuccess(result.user);
-        }).catch((e) => console.log("Redir handled:", e.message));
 
         loadWorldRanking(); 
     } else { setTimeout(initRanking, 500); } 
