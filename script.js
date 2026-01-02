@@ -1,6 +1,5 @@
-// バージョンを更新（キャッシュ対策）
-const STORAGE_KEY = 'hueHunter_v1.0.2_best';
-const NAME_KEY = 'hueHunter_v1.0.2_name';
+const STORAGE_KEY = 'hueHunter_v5_best';
+const NAME_KEY = 'hueHunter_v5_name';
 
 const state = {
     score: 0,
@@ -12,196 +11,338 @@ const state = {
     isGuest: false
 };
 
-// --- Auth (ポップアップ方式・強化版) ---
+const ui = {
+    score: document.getElementById('score-display'),
+    board: document.getElementById('game-board'),
+    overlay: document.getElementById('result-overlay'),
+    resRank: document.getElementById('res-rank'),
+    resMsg: document.getElementById('res-msg'),
+    resScore: document.getElementById('res-score'),
+    resBest: document.getElementById('res-best'),
+    startScreen: document.getElementById('start-screen'),
+    backBtn: document.getElementById('back-to-result'),
+    loginNotice: document.getElementById('guest-login-notice')
+};
+
+// --- Authentication & Cloud Sync ---
 
 async function login() {
-    if (!window.fb) return;
     const provider = new window.fb.GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-
-    const loginBtn = document.getElementById('btn-google-login');
-    if (loginBtn) {
-        loginBtn.innerText = "ログイン画面を開いています...";
-        loginBtn.disabled = true;
-    }
-
     try {
-        // ★ リダイレクトではなく「ポップアップ」を使用
-        // Safari等の「他サイト追跡防止」機能の影響を受けにくい
-        await window.fb.signInWithPopup(window.fb.auth, provider);
+        const result = await window.fb.signInWithPopup(window.fb.auth, provider);
+        state.user = result.user;
+        state.isGuest = false;
+
+        // ログイン時にクラウドの記録と同期
+        await syncCloudRecord();
         
-        // ポップアップが閉じたらここに来る
-        console.log("Popup finished");
+        showSetupUI(`Hello, ${state.user.displayName}`);
         
-    } catch (e) { 
-        console.error("Popup login error or closed:", e);
-        // COOPエラー等はここでキャッチされるが、
-        // onAuthStateChanged が動けば問題ないので無視してボタンを戻す
-        if (loginBtn) {
-            loginBtn.innerText = "Googleでログイン";
-            loginBtn.disabled = false;
+        // もしリザルト画面でログインした場合、即座にランキング更新
+        if (state.isGameOver && state.score >= state.bestScore && state.score > 0) {
+            saveWorldRecord();
+            ui.loginNotice.style.display = 'none';
         }
+    } catch (e) {
+        console.error("Login failed", e);
     }
 }
 
-function handleLoginSuccess(user) {
-    if (state.user) return;
-    state.user = user;
-    state.isGuest = false;
-    
-    // UI切り替え
-    const loginOptions = document.getElementById('login-options');
-    const setupUi = document.getElementById('setup-ui');
-    if (loginOptions) loginOptions.style.display = 'none';
-    if (setupUi) setupUi.style.display = 'flex';
-    
-    const welcomeMsg = document.getElementById('welcome-msg');
-    if (welcomeMsg) welcomeMsg.innerText = `Hello, ${user.displayName}`;
+async function syncCloudRecord() {
+    if (!state.user) return;
+    try {
+        const docRef = window.fb.doc(window.fb.db, "rankings", state.user.uid);
+        const docSnap = await window.fb.getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const cloudBest = data.score;
+            const cloudName = data.name;
+
+            // クラウドの方が記録が高ければローカルを上書き
+            if (cloudBest > state.bestScore) {
+                state.bestScore = cloudBest;
+                localStorage.setItem(STORAGE_KEY, state.bestScore);
+            }
+            // 名前も同期
+            if (cloudName) {
+                localStorage.setItem(NAME_KEY, cloudName);
+            }
+        }
+    } catch (e) {
+        console.error("Sync error:", e);
+    }
+}
+
+function continueAsGuest() {
+    state.isGuest = true;
+    state.user = null;
+    showSetupUI("Guest Mode");
+}
+
+function showSetupUI(msg) {
+    document.getElementById('login-options').style.display = 'none';
+    document.getElementById('setup-ui').style.display = 'flex';
+    document.getElementById('welcome-msg').innerText = msg;
     
     const savedName = localStorage.getItem(NAME_KEY);
-    const nameInput = document.getElementById('display-name');
-    if (savedName && nameInput) nameInput.value = savedName;
-
-    const statusEl = document.getElementById('login-status-res');
-    if (statusEl) { statusEl.innerText = "Logged In"; statusEl.style.color = "#4CAF50"; }
-
-    syncCloudRecord();
+    if(savedName) document.getElementById('display-name').value = savedName;
 }
 
-// --- Game Logic ---
+// --- Game Core ---
 
 function startGame() {
-    const nameInput = document.getElementById('display-name');
-    const nameValue = nameInput ? nameInput.value.trim() : "Player";
-    if (!nameValue) { alert("名前を入力してください"); return; }
-    localStorage.setItem(NAME_KEY, nameValue);
-    document.getElementById('start-screen').style.display = 'none';
-    renderGame();
+    const nameInput = document.getElementById('display-name').value.trim();
+    if (!nameInput) {
+        alert("名前を入力してください");
+        return;
+    }
+    localStorage.setItem(NAME_KEY, nameInput);
+    
+    ui.startScreen.style.opacity = '0';
+    setTimeout(() => {
+        ui.startScreen.style.display = 'none';
+        renderGame();
+    }, 500);
 }
 
 function renderGame() {
+    // 盤面確認中以外でゲームオーバーなら描画しない
     if (state.isGameOver && !state.isPeeking) return;
-    const board = document.getElementById('game-board');
-    if (!board) return;
-    board.innerHTML = '';
-    const h = Math.floor(Math.random() * 360), s = 80, l = 50; 
-    let m = (h >= 80 && h <= 165) ? 1.8 : (h >= 166 && h <= 210) ? 1.3 : (h >= 211 && h <= 280) ? 1.2 : 1.0;
-    const d = state.currentDiff * m;
+    ui.board.innerHTML = '';
+    
+    const h = Math.floor(Math.random() * 360);
+    const s = 80; 
+    const l = 50; 
+
+    // --- マクアダム楕円理論 + 生理光学に基づく難易度補正 ---
+    let multiplier = 1.0;
+
+    if (h >= 80 && h <= 165) {
+        multiplier = 1.8; // 緑エリア：視覚感度が最も低い
+    } else if (h >= 166 && h <= 210) {
+        multiplier = 1.3; // シアンエリア
+    } else if (h >= 211 && h <= 280) {
+        multiplier = 1.2; // 青・紫エリア
+    } else if (h >= 320 || h <= 20) {
+        multiplier = 1.15; // ★赤・ピンクエリア：黄色に比べ感度が落ちるため微補正
+    } else {
+        multiplier = 1.0; // オレンジ・黄色エリア：人間が最も敏感なゾーン（基準）
+    }
+
+    // 補正倍率を適用した難易度(d)
+    const d = state.currentDiff * multiplier; 
+    const sign = Math.random() < 0.5 ? 1 : -1;
+    const targetH = (h + (d * sign) + 360) % 360;
+
+    const baseColor = `hsl(${h}, ${s}%, ${l}%)`;
+    const targetColor = `hsl(${targetH}, ${s}%, ${l}%)`;
     const correctIndex = Math.floor(Math.random() * 25);
 
     for (let i = 0; i < 25; i++) {
         const block = document.createElement('div');
         block.className = 'block';
-        block.style.backgroundColor = (i === correctIndex) ? `hsl(${(h+(d*(Math.random()<0.5?1:-1))+360)%360},${s}%,${l}%)` : `hsl(${h},${s}%,${l}%)`;
+        
+        // だららっ演出（左上から右下へ）
+        const row = Math.floor(i / 5);
+        const col = i % 5;
+        block.style.animationDelay = `${(row + col) * 0.04}s`;
+        
+        block.style.backgroundColor = (i === correctIndex) ? targetColor : baseColor;
         if (i === correctIndex) block.id = "target";
-        block.onclick = () => { if (!state.isGameOver) (i === correctIndex) ? handleCorrect() : handleIncorrect(); };
-        board.appendChild(block);
+        
+        // クリックイベント
+        block.onclick = () => {
+            // ★重要：盤面確認モード(GameOver状態)ではクリックを無効化
+            if (state.isGameOver) return; 
+            (i === correctIndex) ? handleCorrect() : handleIncorrect();
+        };
+
+        // 盤面確認時の正解表示
+        if (state.isGameOver && i === correctIndex) {
+            block.classList.add('correct-answer');
+        }
+        ui.board.appendChild(block);
     }
 }
 
 function handleCorrect() {
     state.score++;
-    document.getElementById('score-display').innerText = state.score;
+    ui.score.innerText = state.score;
+    // 難易度曲線
     state.currentDiff = Math.max(1.8, 15 * Math.pow(0.978, state.score));
     renderGame();
 }
 
 function handleIncorrect() {
-    if (state.isGameOver) return;
     state.isGameOver = true;
-    const localBest = parseInt(localStorage.getItem(STORAGE_KEY)) || 0;
-    if (state.score > localBest) {
-        state.bestScore = state.score;
-        localStorage.setItem(STORAGE_KEY, state.score);
-    } else { state.bestScore = localBest; }
-
+    const isNewBest = state.score > state.bestScore;
+    
+    // 不正解のブロックを薄くする
     document.querySelectorAll('.block').forEach(b => b.classList.add('fade-out'));
+    // 正解のブロックだけ強調
     const target = document.getElementById('target');
-    if (target) { target.classList.remove('fade-out'); target.classList.add('correct-answer'); }
-    if (!state.isGuest && state.user) saveWorldRecord();
-    setTimeout(() => displayResultUI(), 800);
-}
+    target.classList.remove('fade-out');
+    target.classList.add('correct-answer');
 
-// --- Result & Ranking ---
-
-function displayResultUI() {
-    state.isPeeking = false;
-    const overlay = document.getElementById('result-overlay');
-    const finalBest = parseInt(localStorage.getItem(STORAGE_KEY)) || state.score;
-    document.getElementById('res-score').innerText = state.score;
-    document.getElementById('res-best').innerText = finalBest;
-
-    const newLabel = document.getElementById('new-record-label');
-    if (newLabel) {
-        newLabel.style.display = (state.score >= finalBest && state.score > 0) ? 'block' : 'none';
-        if (state.score >= finalBest && state.score > 0) createFirework();
+    // ログイン済みならクラウドに記録
+    if (!state.isGuest && state.user && isNewBest) {
+        saveWorldRecord();
     }
-    
-    document.getElementById('guest-login-notice').style.display = (!state.user) ? 'block' : 'none';
-    loadWorldRanking();
-    
-    const info = getRankInfo(state.score);
-    document.getElementById('res-rank').innerText = info.rank;
-    document.getElementById('res-msg').innerText = info.msg;
-    overlay.style.display = 'flex';
-    setTimeout(() => overlay.classList.add('visible'), 50);
+
+    setTimeout(() => showResult(isNewBest), 800);
 }
+
+// --- Online Ranking ---
 
 async function saveWorldRecord() {
-    if (!state.user || !window.fb) return;
+    if (!state.user) return;
     const playerName = localStorage.getItem(NAME_KEY) || "Unknown";
-    const bestToSave = parseInt(localStorage.getItem(STORAGE_KEY)) || state.score;
     try {
         const docRef = window.fb.doc(window.fb.db, "rankings", state.user.uid);
-        await window.fb.setDoc(docRef, { name: playerName, score: bestToSave, timestamp: window.fb.serverTimestamp() }, { merge: true });
-    } catch (e) { console.error("Save error", e); }
+        await window.fb.setDoc(docRef, {
+            name: playerName,
+            score: state.score,
+            timestamp: window.fb.serverTimestamp()
+        });
+    } catch (e) {
+        console.error("Save error", e);
+    }
 }
 
 async function loadWorldRanking() {
-    if (!window.fb || !window.fb.db) return;
+    const listEl = document.getElementById('ranking-list');
+    const footerEl = document.getElementById('ranking-footer');
+
     try {
-        const q = window.fb.query(window.fb.collection(window.fb.db, "rankings"), window.fb.orderBy("score", "desc"), window.fb.limit(10));
+        const q = window.fb.query(
+            window.fb.collection(window.fb.db, "rankings"),
+            window.fb.orderBy("score", "desc")
+        );
         const snap = await window.fb.getDocs(q);
-        let html = ""; let rank = 1; let myRankData = null;
+        
+        let html = "";
+        let rank = 1;
+        let myRankData = null;
+        const topLimit = 5;
+
+        // データがあれば「もっと見る」ボタンを表示
+        if (!snap.empty) {
+            footerEl.style.display = 'block';
+        }
+
         snap.forEach(doc => {
             const data = doc.data();
             const isMe = state.user && doc.id === state.user.uid;
-            if (rank <= 5) {
+
+            // TOP 5 表示
+            if (rank <= topLimit) {
                 html += `<div style="display:flex; justify-content:space-between; margin-bottom:4px; ${isMe ? 'color:var(--accent-color); font-weight:bold;' : ''}">
                             <span>${rank}. ${data.name}${isMe ? ' (You)' : ''}</span>
                             <span>${data.score}</span>
                          </div>`;
             }
-            if (isMe) myRankData = { rank, score: data.score, name: data.name };
+            // 自分のランクを保存
+            if (isMe) {
+                myRankData = { rank, score: data.score, name: data.name };
+            }
             rank++;
         });
-        if (myRankData && myRankData.rank > 5) {
+
+        // 自分がランク外(6位以下)なら下に表示
+        if (myRankData && myRankData.rank > topLimit) {
             html += `<div style="border-top: 1px dashed rgba(255,255,255,0.3); margin: 8px 0; padding-top: 8px;"></div>
-                     <div style="display:flex; justify-content:space-between; color:var(--accent-color); font-weight:bold;"><span>${myRankData.rank}. ${myRankData.name} (You)</span><span>${myRankData.score}</span></div>`;
+                     <div style="display:flex; justify-content:space-between; color:var(--accent-color); font-weight:bold;">
+                        <span>${myRankData.rank}. ${myRankData.name} (You)</span>
+                        <span>${myRankData.score}</span>
+                     </div>`;
         }
-        
-        const finalHtml = html || "No records";
-        if (document.getElementById('ranking-list')) document.getElementById('ranking-list').innerHTML = finalHtml;
-        if (document.getElementById('start-ranking-list')) document.getElementById('start-ranking-list').innerHTML = finalHtml;
-        if (document.getElementById('setup-ranking-list')) document.getElementById('setup-ranking-list').innerHTML = finalHtml;
 
-    } catch (e) { console.error("Load error:", e); }
+        listEl.innerHTML = html || "No records yet";
+    } catch (e) {
+        listEl.innerHTML = "Error loading ranking";
+    }
 }
 
-async function syncCloudRecord() {
-    if (!state.user || !window.fb) return;
+// 全ランキングを表示する関数
+window.openFullRanking = async function() {
+    const modal = document.getElementById('full-ranking-modal');
+    const listEl = document.getElementById('full-ranking-list');
+    
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('active'), 10);
+    
+    listEl.innerHTML = '<div style="text-align:center; margin-top:20px;">Loading...</div>';
+
     try {
-        const docRef = window.fb.doc(window.fb.db, "rankings", state.user.uid);
-        const docSnap = await window.fb.getDoc(docRef);
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data.score > state.bestScore) {
-                state.bestScore = data.score;
-                localStorage.setItem(STORAGE_KEY, state.bestScore);
-            }
-        }
-    } catch (e) { console.error("Sync error:", e); }
+        const q = window.fb.query(
+            window.fb.collection(window.fb.db, "rankings"),
+            window.fb.orderBy("score", "desc"),
+            window.fb.limit(100)
+        );
+        const snap = await window.fb.getDocs(q);
+        
+        let html = "";
+        let rank = 1;
+
+        snap.forEach(doc => {
+            const data = doc.data();
+            const isMe = state.user && doc.id === state.user.uid;
+            
+            html += `<div class="ranking-row ${isMe ? 'me' : ''}">
+                        <span class="rank-num">${rank}</span>
+                        <span class="rank-name">${data.name} ${isMe ? '(You)' : ''}</span>
+                        <span class="rank-score">${data.score}</span>
+                     </div>`;
+            rank++;
+        });
+        if (rank > 100) html += `<div style="text-align:center; padding:20px; color:#888;">Top 100 displayed</div>`;
+
+        listEl.innerHTML = html;
+    } catch (e) {
+        console.error(e);
+        listEl.innerHTML = '<div style="text-align:center; color:red;">Error loading list</div>';
+    }
+};
+
+window.closeFullRanking = function() {
+    const modal = document.getElementById('full-ranking-modal');
+    modal.classList.remove('active');
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+};
+
+function showResult(isNewBest) {
+    state.isPeeking = false;
+    ui.backBtn.classList.remove('visible');
+    
+    if (isNewBest) {
+        state.bestScore = state.score;
+        localStorage.setItem(STORAGE_KEY, state.bestScore);
+        document.getElementById('new-record-label').style.display = 'block';
+        createFirework();
+    } else {
+        document.getElementById('new-record-label').style.display = 'none';
+    }
+
+    ui.loginNotice.style.display = (!state.user) ? 'block' : 'none';
+
+    loadWorldRanking();
+
+    const info = getRankInfo(state.score);
+    ui.resRank.innerText = info.rank;
+    // 100点以上で金文字クラス付与
+    if (state.score >= 100) ui.resRank.classList.add('gold-text');
+    else ui.resRank.classList.remove('gold-text');
+
+    ui.resScore.innerText = state.score;
+    ui.resBest.innerText = state.bestScore;
+    ui.resMsg.innerText = info.msg;
+    
+    ui.overlay.style.display = 'flex';
+    setTimeout(() => ui.overlay.classList.add('visible'), 10);
 }
+
+// --- Utils ---
 
 function getRankInfo(score) {
     if (score >= 100) return { rank: "👁️‍🗨️ 神の目", msg: "真理の到達者。色彩の深淵を見通す、神の領域。" };
@@ -215,96 +356,45 @@ function getRankInfo(score) {
 }
 
 function createFirework() {
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 40; i++) {
         const p = document.createElement('div');
         document.body.appendChild(p);
         const x = window.innerWidth / 2, y = window.innerHeight / 2;
-        p.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:6px;height:6px;background:hsl(${Math.random()*360},100%,60%);border-radius:50%;z-index:3000;pointer-events:none;`;
-        const angle = Math.random()*Math.PI*2, v = Math.random()*10+5;
+        p.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:6px;height:6px;background:hsl(${Math.random()*360},100%,60%);border-radius:50%;z-index:1000;pointer-events:none;`;
+        const angle = Math.random()*Math.PI*2, v = Math.random()*12+4;
         let vx = Math.cos(angle)*v, vy = Math.sin(angle)*v, op = 1;
         const anim = () => {
-            vx *= 0.96; vy += 0.25;
-            p.style.left = (parseFloat(p.style.left)+vx)+'px'; p.style.top = (parseFloat(p.style.top)+vy)+'px';
-            op -= 0.02; p.style.opacity = op;
+            vx *= 0.97; vy += 0.25;
+            p.style.left = (parseFloat(p.style.left)+vx)+'px';
+            p.style.top = (parseFloat(p.style.top)+vy)+'px';
+            op -= 0.015; p.style.opacity = op;
             if (op > 0) requestAnimationFrame(anim); else p.remove();
         };
         requestAnimationFrame(anim);
     }
 }
 
-// --- Controllers ---
-
-function continueAsGuest() {
-    state.isGuest = true;
-    document.getElementById('login-options').style.display = 'none';
-    document.getElementById('setup-ui').style.display = 'flex';
-    document.getElementById('welcome-msg').innerText = "Guest Mode";
-}
-
-function toggleStartRanking() {
-    const container = document.getElementById('start-ranking-container');
-    const btn = document.getElementById('btn-show-ranking');
-    if (container.style.display === 'none') {
-        container.style.display = 'block';
-        btn.innerText = '✖ ランキングを閉じる';
-        loadWorldRanking(); 
-    } else {
-        container.style.display = 'none';
-        btn.innerText = '🏆 ランキングを表示';
-    }
-}
-
-function toggleSetupRanking() {
-    const container = document.getElementById('setup-ranking-container');
-    const btn = document.getElementById('btn-show-ranking-setup');
-    if (container.style.display === 'none') {
-        container.style.display = 'block';
-        btn.innerText = '✖ ランキングを閉じる';
-        loadWorldRanking(); 
-    } else {
-        container.style.display = 'none';
-        btn.innerText = '🏆 ランキングを表示';
-    }
-}
-
-function resetGame() {
-    state.score = 0; state.currentDiff = 15; state.isGameOver = false; state.isPeeking = false;
-    document.getElementById('score-display').innerText = "0";
-    document.getElementById('result-overlay').classList.remove('visible');
-    setTimeout(() => { document.getElementById('result-overlay').style.display = 'none'; renderGame(); }, 300);
-}
-
 function peekBoard() {
     state.isPeeking = true;
     document.querySelectorAll('.block').forEach(b => b.classList.remove('fade-out'));
-    document.getElementById('result-overlay').classList.remove('visible');
-    setTimeout(() => { document.getElementById('result-overlay').style.display = 'none'; document.getElementById('back-to-result').classList.add('visible'); }, 300);
+    ui.overlay.classList.remove('visible');
+    setTimeout(() => { 
+        ui.overlay.style.display = 'none'; 
+        ui.backBtn.classList.add('visible'); 
+    }, 300);
 }
 
-// Global Register
-window.login = login;
-window.continueAsGuest = continueAsGuest;
-window.startGame = startGame;
-window.toggleStartRanking = toggleStartRanking;
-window.toggleSetupRanking = toggleSetupRanking;
-window.resetGame = resetGame;
-window.peekBoard = peekBoard;
-window.showResult = () => { state.isPeeking = false; document.getElementById('back-to-result').classList.remove('visible'); displayResultUI(); };
-
-function initRanking() { 
-    if (window.fb && window.fb.auth) { 
-        
-        // ログイン状態が変わるのを常に監視（これが最強です）
-        window.fb.onAuthStateChanged(window.fb.auth, (user) => {
-            if (user) {
-                // ポップアップが成功していればここに来ます
-                handleLoginSuccess(user);
-            } else {
-                // ログアウト状態
-            }
-        });
-
-        loadWorldRanking(); 
-    } else { setTimeout(initRanking, 500); } 
+function resetGame() {
+    state.score = 0; 
+    state.currentDiff = 15; 
+    state.isGameOver = false; 
+    state.isPeeking = false;
+    
+    ui.score.innerText = 0; 
+    ui.overlay.classList.remove('visible');
+    
+    setTimeout(() => { 
+        ui.overlay.style.display = 'none'; 
+        renderGame(); 
+    }, 300);
 }
-initRanking();
