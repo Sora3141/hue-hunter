@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Hue Hunter | World</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="header">
+        <div class="score-label">SCORE</div>
+        <h1 id="score-display">0</h1>
+    </div>
+
+    <div id="game-board"></div>
+
+    <div id="start-screen">
+        <h1 class="game-title">HUE<br>HUNTER</h1>
+        <div class="rules-container">
+            <p class="rule-text">あなたの色彩は、<br><span class="highlight">どの領域？</span></p>
+        </div>
+        <button class="btn-start" onclick="startGame()">挑む</button>
+    </div>
+
+    <button id="back-to-result" onclick="showResult(false)">結果に戻る</button>
+
+    <div id="result-overlay">
+        <div id="new-record-label" style="display:none; color: #ffd700; font-weight: 900; margin-bottom: 10px; font-size: 1.2rem; text-shadow: 0 0 10px rgba(255,215,0,0.5);">★ NEW RECORD ★</div>
+        <div id="res-rank" class="rank-name">---</div>
+        <div id="res-msg" class="msg-text">---</div>
+
+        <div id="ranking-container" style="width: 280px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; margin-bottom: 20px; font-size: 0.85rem;">
+            <div style="border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px; margin-bottom: 10px; font-weight: bold; color: var(--accent-color); display: flex; justify-content: space-between;">
+                <span>WORLD TOP 5</span>
+                <span id="login-status" style="font-size: 0.7rem; color: #888;">Not Logged In</span>
+            </div>
+            <div id="ranking-list">Loading rankings...</div>
+        </div>
+
+        <div id="online-save-container" style="display: none; margin-bottom: 20px;">
+            <button onclick="loginAndSave()" style="background: white; color: black; padding: 12px 25px; border-radius: 30px; font-weight: bold; border: none; display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0 auto;">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18">
+                世界ランキングに登録
+            </button>
+        </div>
+
+        <div class="result-stats">
+            <div class="stat-item">
+                <span class="stat-label">SCORE</span>
+                <span id="res-score" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">BEST</span>
+                <span id="res-best" class="stat-value">0</span>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-restart" onclick="resetGame()">もう一度挑戦</button>
+            <button class="btn-look" onclick="peekBoard()">盤面を確認する</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // ★ 空さんの Config を適用済みです
+        const firebaseConfig = {
+            apiKey: "AIzaSyB933UwRnTI71Vt4cNJDJxTApYtvCDBhOE",
+            authDomain: "huehunterworld.firebaseapp.com",
+            projectId: "huehunterworld",
+            storageBucket: "huehunterworld.firebasestorage.app",
+            messagingSenderId: "627186904630",
+            appId: "1:627186904630:web:6a41bc37ef49fcca82f297"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // JSファイルから呼び出せるようにwindowオブジェクトに登録
+        window.fb = { auth, db, GoogleAuthProvider, signInWithPopup, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp };
+
+        onAuthStateChanged(auth, (user) => {
+            const status = document.getElementById('login-status');
+            if (user) {
+                status.innerText = `Logged in as ${user.displayName}`;
+            } else {
+                status.innerText = `Not Logged In`;
+            }
+        });
+    </script>
+    <script src="script.js"></script>
+</body>
+</html>
