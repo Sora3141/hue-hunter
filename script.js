@@ -29,32 +29,27 @@ const ui = {
 async function login() {
     const provider = new window.fb.GoogleAuthProvider();
     try {
-        const result = await window.fb.signInWithPopup(window.fb.auth, provider);
-        state.user = result.user;
-        state.isGuest = false;
-        await syncCloudRecord();
-        showSetupUI(`Hello, ${state.user.displayName}`);
-        if (state.isGameOver && state.score >= state.bestScore && state.score > 0) {
-            saveWorldRecord();
-            ui.loginNotice.style.display = 'none';
-        }
-    } catch (e) { console.error("Login failed", e); }
+        // ポップアップではなくリダイレクト（画面遷移）を使用する
+        // スマホのSafariなどではこちらの方が圧倒的に安定します
+        await window.fb.signInWithRedirect(window.fb.auth, provider);
+    } catch (e) {
+        console.error("Login failed", e);
+    }
 }
 
-async function syncCloudRecord() {
-    if (!state.user) return;
+// リダイレクトから戻ってきた時の処理を initRanking 等に追加
+async function checkRedirectResult() {
     try {
-        const docRef = window.fb.doc(window.fb.db, "rankings", state.user.uid);
-        const docSnap = await window.fb.getDoc(docRef);
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data.score > state.bestScore) {
-                state.bestScore = data.score;
-                localStorage.setItem(STORAGE_KEY, state.bestScore);
-            }
-            if (data.name) localStorage.setItem(NAME_KEY, data.name);
+        const result = await window.fb.getRedirectResult(window.fb.auth);
+        if (result) {
+            state.user = result.user;
+            state.isGuest = false;
+            await syncCloudRecord();
+            showSetupUI(`Hello, ${state.user.displayName}`);
         }
-    } catch (e) { console.error("Sync error:", e); }
+    } catch (e) {
+        console.error("Redirect error", e);
+    }
 }
 
 function continueAsGuest() {
