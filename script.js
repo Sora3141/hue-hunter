@@ -24,32 +24,44 @@ const ui = {
     loginNotice: document.getElementById('guest-login-notice')
 };
 
-// --- Auth ---
+// --- Auth & Sync ---
 
 async function login() {
     const provider = new window.fb.GoogleAuthProvider();
     try {
-        // ポップアップではなくリダイレクト（画面遷移）を使用する
-        // スマホのSafariなどではこちらの方が圧倒的に安定します
-        await window.fb.signInWithRedirect(window.fb.auth, provider);
-    } catch (e) {
-        console.error("Login failed", e);
-    }
+        const result = await window.fb.signInWithPopup(window.fb.auth, provider);
+        state.user = result.user;
+        state.isGuest = false;
+
+        // クラウドから既存記録を読み込み、必要ならローカルに統合
+        await syncCloudRecord();
+        
+        // ログインした時点で、ローカルのベストスコアが0より大きければクラウドに保存
+        if (state.bestScore > 0) {
+            await saveWorldRecord();
+        }
+
+        showSetupUI(`Hello, ${state.user.displayName}`);
+    } catch (e) { console.error("Login failed", e); }
 }
 
-// リダイレクトから戻ってきた時の処理を initRanking 等に追加
-async function checkRedirectResult() {
+async function syncCloudRecord() {
+    if (!state.user) return;
     try {
-        const result = await window.fb.getRedirectResult(window.fb.auth);
-        if (result) {
-            state.user = result.user;
-            state.isGuest = false;
-            await syncCloudRecord();
-            showSetupUI(`Hello, ${state.user.displayName}`);
+        const docRef = window.fb.doc(window.fb.db, "rankings", state.user.uid);
+        const docSnap = await window.fb.getDoc(docRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            // クラウドの方が高ければ更新
+            if (data.score > state.bestScore) {
+                state.bestScore = data.score;
+                localStorage.setItem(STORAGE_KEY, state.bestScore);
+            }
+            if (data.name && !localStorage.getItem(NAME_KEY)) {
+                localStorage.setItem(NAME_KEY, data.name);
+            }
         }
-    } catch (e) {
-        console.error("Redirect error", e);
-    }
+    } catch (e) { console.error("Sync error:", e); }
 }
 
 function continueAsGuest() {
@@ -112,15 +124,27 @@ function handleCorrect() {
 
 function handleIncorrect() {
     state.isGameOver = true;
+    
+    // ベストスコアの判定とローカル保存
     const isNewBest = state.score > state.bestScore;
+    if (isNewBest) {
+        state.bestScore = state.score;
+        localStorage.setItem(STORAGE_KEY, state.bestScore);
+    }
+
     document.querySelectorAll('.block').forEach(b => b.classList.add('fade-out'));
     const target = document.getElementById('target');
     if (target) { target.classList.remove('fade-out'); target.classList.add('correct-answer'); }
-    if (!state.isGuest && state.user && isNewBest) saveWorldRecord();
+
+    // ★ログイン済みならベストスコアを保存
+    if (!state.isGuest && state.user) {
+        saveWorldRecord();
+    }
+
     setTimeout(() => showResult(isNewBest), 800);
 }
 
-// --- Ranking Functions ---
+// --- Ranking ---
 
 function toggleStartRanking() {
     const container = document.getElementById('start-ranking-container');
@@ -140,7 +164,13 @@ async function saveWorldRecord() {
     const playerName = localStorage.getItem(NAME_KEY) || "Unknown";
     try {
         const docRef = window.fb.doc(window.fb.db, "rankings", state.user.uid);
-        await window.fb.setDoc(docRef, { name: playerName, score: state.score, timestamp: window.fb.serverTimestamp() });
+        // localStorageの最新ベストスコアを確実に保存
+        await window.fb.setDoc(docRef, { 
+            name: playerName, 
+            score: state.bestScore, 
+            timestamp: window.fb.serverTimestamp() 
+        }, { merge: true });
+        console.log("Score saved to cloud.");
     } catch (e) { console.error("Save error", e); }
 }
 
@@ -181,8 +211,6 @@ function showResult(isNewBest) {
     state.isPeeking = false;
     ui.backBtn.classList.remove('visible');
     if (isNewBest) {
-        state.bestScore = state.score;
-        localStorage.setItem(STORAGE_KEY, state.bestScore);
         document.getElementById('new-record-label').style.display = 'block';
         createFirework();
     } else { document.getElementById('new-record-label').style.display = 'none'; }
@@ -251,7 +279,6 @@ function resetGame() {
     setTimeout(() => { ui.overlay.style.display = 'none'; renderGame(); }, 300);
 }
 
-// ★最重要：HTMLのonclickから呼べるようにグローバル登録
 window.login = login;
 window.continueAsGuest = continueAsGuest;
 window.startGame = startGame;
@@ -260,6 +287,5 @@ window.resetGame = resetGame;
 window.peekBoard = peekBoard;
 window.showResult = showResultFromPeek;
 
-// 初期読み込み
 function initRanking() { if (window.fb && window.fb.db) { loadWorldRanking(); } else { setTimeout(initRanking, 500); } }
 initRanking();
