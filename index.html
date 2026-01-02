@@ -7,71 +7,71 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="top-fixed-ad" style="width: 100%; background: #000; display: flex; justify-content: center; padding: 5px 0; z-index: 100;">
+    <div id="top-fixed-ad">
         <script src="https://adm.shinobi.jp/s/3be4a74111b0e4660a4445b3864b1a35"></script>
-        </div>
-
-    <div class="header">
-        <div class="score-label">SCORE</div>
-        <h1 id="score-display">0</h1>
     </div>
 
-    <div id="game-board"></div>
-    <button id="back-to-result" onclick="showResult(false)">結果に戻る</button>
-
-    <div id="start-screen">
-        <h1 class="game-title">HUE<br>HUNTER</h1>
-        <div id="auth-ui">
-            <div id="login-options">
-                <button id="btn-google-login" class="btn-start" onclick="login()">Googleでログイン</button>
-                <button id="btn-guest" class="btn-look" style="margin-top:12px; opacity:0.8;" onclick="continueAsGuest()">ログインせずに遊ぶ</button>
-                <p style="font-size: 0.7rem; color: #888; margin-top: 15px;">※ログインするとデバイス間で最高記録を同期できます</p>
-            </div>
-
-            <div id="setup-ui" style="display:none;">
-                <p id="welcome-msg"></p>
-                <input type="text" id="display-name" placeholder="表示名を入力" maxlength="8">
-                <br>
-                <button class="btn-start" onclick="startGame()">ゲーム開始</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="result-overlay">
-        <div id="new-record-label" style="display:none;">★ NEW WORLD RECORD ★</div>
-        <div id="res-rank" class="rank-name">---</div>
-        <div id="res-msg" class="msg-text">---</div>
-
-        <div id="ranking-container">
-            <div id="ranking-header">
-                <span>WORLD TOP 5</span>
-                <span id="login-status">Checking...</span>
-            </div>
-            <div id="ranking-list">Loading rankings...</div>
+    <div id="main-container">
+        <div class="header">
+            <div class="score-label">SCORE</div>
+            <h1 id="score-display">0</h1>
         </div>
 
-        <div id="ad-space" style="margin: 10px 0; min-height: 250px; display: flex; justify-content: center; align-items: center;">
-            <script src="https://adm.shinobi.jp/s/fbe3608133af14816ff830129b4da30b"></script>
-            </div>
+        <div id="game-board"></div>
+        <button id="back-to-result" onclick="showResult(false)">結果に戻る</button>
 
-        <div id="guest-login-notice" style="display:none;">
-            <button onclick="login()" class="btn-sync-notice">Googleログインして同期を有効化</button>
-        </div>
-
-        <div class="result-stats">
-            <div class="stat-item">
-                <span class="stat-label">SCORE</span>
-                <span id="res-score" class="stat-value">0</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">BEST</span>
-                <span id="res-best" class="stat-value">0</span>
+        <div id="start-screen">
+            <h1 class="game-title">HUE<br>HUNTER</h1>
+            <div id="auth-ui">
+                <div id="login-options">
+                    <button id="btn-google-login" class="btn-start" onclick="login()">Googleでログイン</button>
+                    <button id="btn-guest" class="btn-look" onclick="continueAsGuest()">ログインせずに遊ぶ</button>
+                    <p class="auth-notice">※ログインするとデバイス間で最高記録を同期できます</p>
+                </div>
+                <div id="setup-ui" style="display:none;">
+                    <p id="welcome-msg"></p>
+                    <input type="text" id="display-name" placeholder="表示名を入力" maxlength="8">
+                    <button class="btn-start" onclick="startGame()">ゲーム開始</button>
+                </div>
             </div>
         </div>
 
-        <div class="btn-group">
-            <button class="btn-restart" onclick="resetGame()">もう一度挑戦</button>
-            <button class="btn-look" onclick="peekBoard()">盤面を確認する</button>
+        <div id="result-overlay">
+            <div id="new-record-label" style="display:none;">★ NEW WORLD RECORD ★</div>
+            <div id="res-rank" class="rank-name">---</div>
+            <div id="res-msg" class="msg-text">---</div>
+
+            <div id="ranking-container">
+                <div id="ranking-header">
+                    <span>WORLD TOP 5</span>
+                    <span id="login-status">Checking...</span>
+                </div>
+                <div id="ranking-list">Loading rankings...</div>
+            </div>
+
+            <div id="ad-space">
+                <script src="https://adm.shinobi.jp/s/fbe3608133af14816ff830129b4da30b"></script>
+            </div>
+
+            <div id="guest-login-notice" style="display:none;">
+                <button onclick="login()" class="btn-sync-notice">Googleログインして同期を有効化</button>
+            </div>
+
+            <div class="result-stats">
+                <div class="stat-item">
+                    <span class="stat-label">SCORE</span>
+                    <span id="res-score" class="stat-value">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">BEST</span>
+                    <span id="res-best" class="stat-value">0</span>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-restart" onclick="resetGame()">もう一度挑戦</button>
+                <button class="btn-look" onclick="peekBoard()">盤面を確認する</button>
+            </div>
         </div>
     </div>
 
@@ -92,7 +92,6 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-
         window.fb = { auth, db, GoogleAuthProvider, signInWithPopup, collection, doc, setDoc, getDoc, query, orderBy, limit, getDocs, serverTimestamp };
 
         onAuthStateChanged(auth, (user) => {
