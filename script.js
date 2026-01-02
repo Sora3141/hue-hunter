@@ -27,26 +27,34 @@ const ui = {
 // --- Authentication & Cloud Sync ---
 
 async function login() {
+    if (state.isLoggingIn) return; // 処理中の連打防止
+    state.isLoggingIn = true;
+    
+    const loginBtn = document.getElementById('btn-google-login');
+    const originalText = loginBtn.innerText;
+    loginBtn.innerText = "通信中..."; // フィードバック
+
     const provider = new window.fb.GoogleAuthProvider();
     try {
         const result = await window.fb.signInWithPopup(window.fb.auth, provider);
         state.user = result.user;
         state.isGuest = false;
-
-        // ログイン時にクラウドの記録と同期
         await syncCloudRecord();
-        
         showSetupUI(`Hello, ${state.user.displayName}`);
         
-        // もしリザルト画面でログインした場合、即座にランキング更新
         if (state.isGameOver && state.score >= state.bestScore && state.score > 0) {
             saveWorldRecord();
             ui.loginNotice.style.display = 'none';
         }
-    } catch (e) {
+    } catch (e) { 
         console.error("Login failed", e);
+        alert("ログインに失敗しました。通信環境を確認してください。");
+    } finally {
+        state.isLoggingIn = false;
+        loginBtn.innerText = originalText;
     }
 }
+
 
 async function syncCloudRecord() {
     if (!state.user) return;

@@ -7,6 +7,8 @@
 * {
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
+    /* Chromeでのスクロール時のバウンスや意図しない挙動を抑制 */
+    overscroll-behavior: none;
 }
 
 body {
@@ -22,6 +24,7 @@ body {
     align-items: center;
 }
 
+/* ヘッダー */
 .header {
     width: 100%;
     text-align: center;
@@ -43,7 +46,7 @@ body {
     text-shadow: 0 0 20px rgba(0, 242, 255, 0.5);
 }
 
-/* ゲーム盤面：正方形維持 */
+/* ゲーム盤面 */
 #game-board {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -56,6 +59,9 @@ body {
     aspect-ratio: 1 / 1;
     margin: 20px auto;
     place-content: center;
+    /* 盤面が他のUIの背面に隠れないように設定 */
+    position: relative;
+    z-index: 5;
 }
 
 .block {
@@ -66,27 +72,23 @@ body {
     cursor: pointer;
     transition: transform 0.1s;
     animation: fadeIn 0.4s ease-out backwards;
+    /* スマホChromeでのタップ反応を向上 */
+    pointer-events: auto;
 }
 
 .block:active { transform: scale(0.92); }
 
 .correct-answer {
     transform: scale(1.15);
-    z-index: 5;
+    z-index: 6;
 }
 
 @keyframes fadeIn {
-    from { 
-        opacity: 0; 
-        transform: translateY(10px) scale(0.9); 
-    }
-    to { 
-        opacity: 1; 
-        transform: translateY(0) scale(1); 
-    }
+    from { opacity: 0; transform: translateY(10px) scale(0.9); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* UIレイアウト共通 */
+/* UIレイアウト共通（スタート画面・リザルト） */
 #start-screen, #result-overlay {
     position: fixed;
     inset: 0;
@@ -96,6 +98,7 @@ body {
     align-items: center;
     padding: 20px;
     background: var(--bg-color);
+    /* 盤面より必ず前に出す */
     z-index: 1000;
 }
 
@@ -105,6 +108,8 @@ body {
     align-items: center;
     width: 100%;
     gap: 12px;
+    position: relative;
+    z-index: 1010;
 }
 
 .game-title {
@@ -142,13 +147,16 @@ body {
     width: 240px;
     text-align: center;
     transition: all 0.2s;
+    /* Chromeで他の要素にクリックを吸われないように設定 */
+    position: relative;
+    z-index: 1100;
+    pointer-events: auto !important;
 }
 
 .btn-start { background: var(--accent-color); color: #000; }
 .btn-look { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
 .btn-restart { background: var(--accent-color); color: #000; }
 
-/* ゲスト同期ボタンの統一 */
 .btn-sync-notice {
     border: 1px solid var(--accent-color);
     background: rgba(0, 242, 255, 0.1);
@@ -165,7 +173,7 @@ body {
     gap: 12px;
 }
 
-/* リザルト画面 */
+/* リザルト画面専用 */
 #result-overlay {
     background: rgba(0,0,0,0.95);
     display: none;
@@ -174,10 +182,7 @@ body {
     transition: opacity 0.3s;
 }
 
-#result-overlay.visible {
-    display: flex !important;
-    opacity: 1;
-}
+#result-overlay.visible { display: flex !important; opacity: 1; }
 
 #ranking-container {
     width: 280px;
@@ -185,6 +190,8 @@ body {
     padding: 15px;
     border-radius: 15px;
     margin-bottom: 20px;
+    position: relative;
+    z-index: 2010;
 }
 
 #ranking-header {
@@ -198,6 +205,7 @@ body {
     font-weight: bold;
 }
 
+/* 結果を見るボタン（浮遊） */
 #back-to-result {
     position: fixed;
     bottom: 40px;
@@ -211,8 +219,8 @@ body {
     font-weight: bold;
     display: none;
     z-index: 3000;
+    pointer-events: auto;
 }
-
 #back-to-result.visible { display: block !important; }
 
 .fade-out { opacity: 0.2; transform: scale(0.9); transition: 0.5s; }
@@ -224,85 +232,42 @@ body {
 .stat-value { font-size: 1.8rem; font-weight: bold; }
 .gold-text { background: linear-gradient(to bottom, #ffd700, #ff8c00); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 
-/* もっと見るボタン */
+/* もっと見る（リンク型） */
 .link-button {
-    font-size: 0.8rem;
-    color: #888;
-    text-decoration: underline;
-    cursor: pointer;
-    padding: 5px;
-    display: inline-block;
+    font-size: 0.8rem; color: #888; text-decoration: underline; cursor: pointer; padding: 10px; display: inline-block;
+    pointer-events: auto;
 }
 
-/* 全ランキング用モーダル */
+/* 全ランキング用モーダル（最前面） */
 #full-ranking-modal {
-    position: fixed;
-    inset: 0;
-    background: var(--bg-color);
-    z-index: 4000;
-    display: none;
-    flex-direction: column;
-    padding: 20px;
-    transition: transform 0.3s ease-in-out;
-    transform: translateY(100%);
+    position: fixed; inset: 0; background: var(--bg-color); z-index: 4000;
+    display: none; flex-direction: column; padding: 20px;
+    transition: transform 0.3s ease-in-out; transform: translateY(100%);
 }
-
-#full-ranking-modal.active {
-    display: flex;
-    transform: translateY(0);
-}
+#full-ranking-modal.active { display: flex; transform: translateY(0); }
 
 .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    border-bottom: 1px solid var(--accent-color);
-    padding-bottom: 10px;
-    width: 100%;
-    max-width: 500px;
-    margin-left: auto;
-    margin-right: auto;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; border-bottom: 1px solid var(--accent-color);
+    padding-bottom: 10px; width: 100%; max-width: 500px;
+    margin-left: auto; margin-right: auto;
 }
+.modal-header h2 { margin: 0; font-size: 1.5rem; color: var(--accent-color); }
 
-.modal-header h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    color: var(--accent-color);
-}
-
-.btn-close {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 2rem;
-    cursor: pointer;
-    line-height: 1;
-}
+.btn-close { background: none; border: none; color: #fff; font-size: 2.5rem; cursor: pointer; line-height: 1; padding: 10px; }
 
 #full-ranking-list {
-    flex: 1;
-    overflow-y: auto;
-    width: 100%;
-    max-width: 500px;
-    margin: 0 auto;
-    padding-bottom: 50px;
+    flex: 1; overflow-y: auto; width: 100%; max-width: 500px;
+    margin: 0 auto; padding-bottom: 50px;
+    /* スムーズなスクロール */
+    -webkit-overflow-scrolling: touch;
 }
 
 .ranking-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 12px 10px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    font-size: 0.95rem;
+    display: flex; justify-content: space-between; padding: 14px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.95rem;
 }
-
-.ranking-row.me {
-    color: var(--accent-color);
-    font-weight: bold;
-    background: rgba(0, 242, 255, 0.05);
-}
-
+.ranking-row.me { color: var(--accent-color); font-weight: bold; background: rgba(0, 242, 255, 0.05); }
 .rank-num { width: 40px; }
 .rank-name { flex: 1; text-align: left; padding-left: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank-score { width: 60px; text-align: right; }
