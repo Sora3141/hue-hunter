@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Hue Hunter | World Edition</title>
+    <title>Hue Hunter | Cloud Sync</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -21,7 +21,7 @@
             <div id="login-options">
                 <button id="btn-google-login" class="btn-start" onclick="login()">Googleでログイン</button>
                 <button id="btn-guest" class="btn-look" style="margin-top:12px; opacity:0.8;" onclick="continueAsGuest()">ログインせずに遊ぶ</button>
-                <p style="font-size: 0.7rem; color: #888; margin-top: 15px;">※ゲストプレイは世界ランキングに登録されません</p>
+                <p style="font-size: 0.7rem; color: #888; margin-top: 15px;">※ログインするとデバイス間で最高記録を同期できます</p>
             </div>
 
             <div id="setup-ui" style="display:none;">
@@ -37,7 +37,7 @@
     <button id="back-to-result" onclick="showResult(false)">結果に戻る</button>
 
     <div id="result-overlay">
-        <div id="new-record-label" style="display:none; color: #ffd700; font-weight: 900; margin-bottom: 10px; font-size: 1.2rem; text-shadow: 0 0 10px rgba(255,215,0,0.5);">★ NEW RECORD ★</div>
+        <div id="new-record-label" style="display:none; color: #ffd700; font-weight: 900; margin-bottom: 10px; font-size: 1.2rem; text-shadow: 0 0 10px rgba(255,215,0,0.5);">★ NEW WORLD RECORD ★</div>
         <div id="res-rank" class="rank-name">---</div>
         <div id="res-msg" class="msg-text">---</div>
 
@@ -51,7 +51,7 @@
 
         <div id="guest-login-notice" style="display:none; margin-bottom: 20px;">
             <button onclick="login()" style="font-size: 0.75rem; background:white; color:black; border:none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer;">
-                Googleログインして世界ランクに参加
+                Googleログインして同期を有効化
             </button>
         </div>
 
@@ -75,7 +75,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        // ★ getDoc を追加しました
+        import { getFirestore, collection, doc, setDoc, getDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB933UwRnTI71Vt4cNJDJxTApYtvCDBhOE",
@@ -90,7 +91,8 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        window.fb = { auth, db, GoogleAuthProvider, signInWithPopup, collection, doc, setDoc, query, orderBy, limit, getDocs, serverTimestamp };
+        // ★ window.fb に getDoc を追加しました
+        window.fb = { auth, db, GoogleAuthProvider, signInWithPopup, collection, doc, setDoc, getDoc, query, orderBy, limit, getDocs, serverTimestamp };
 
         onAuthStateChanged(auth, (user) => {
             const status = document.getElementById('login-status');

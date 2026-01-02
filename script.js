@@ -1,10 +1,8 @@
-// 新しい管理キー（これまでの 'hueHunterBest' とは別の名前）
-const STORAGE_KEY = 'hueHunter_v2_best';
-const NAME_KEY = 'hueHunter_v2_name';
+const STORAGE_KEY = 'hueHunter_v3_best'; // バージョンを上げて完全リセット
+const NAME_KEY = 'hueHunter_v3_name';
 
 const state = {
     score: 0,
-    // 新しいキーから読み込む。データがなければ 0 になる。
     bestScore: parseInt(localStorage.getItem(STORAGE_KEY)) || 0,
     currentDiff: 15,
     isGameOver: false,
@@ -34,16 +32,46 @@ async function login() {
         const result = await window.fb.signInWithPopup(window.fb.auth, provider);
         state.user = result.user;
         state.isGuest = false;
+
+        // ★ クラウドからベスト記録を同期する処理
+        await syncCloudRecord();
         
         showSetupUI(`Hello, ${state.user.displayName}`);
         
-        // リザルト画面でログインした時にハイスコアならその場で保存
         if (state.isGameOver && state.score >= state.bestScore && state.score > 0) {
             saveWorldRecord();
             ui.loginNotice.style.display = 'none';
         }
     } catch (e) {
         console.error("Login failed", e);
+    }
+}
+
+async function syncCloudRecord() {
+    if (!state.user) return;
+    try {
+        // Firestoreから自分のUIDのドキュメントを直接取得
+        const docRef = window.fb.doc(window.fb.db, "rankings", state.user.uid);
+        const docSnap = await window.fb.getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const cloudBest = data.score;
+            const cloudName = data.name;
+
+            // クラウドのスコアが高ければローカルを更新
+            if (cloudBest > state.bestScore) {
+                state.bestScore = cloudBest;
+                localStorage.setItem(STORAGE_KEY, state.bestScore);
+                console.log("Best score synced from cloud:", cloudBest);
+            }
+            // クラウドに保存されていた名前をセット
+            if (cloudName) {
+                localStorage.setItem(NAME_KEY, cloudName);
+            }
+        }
+    } catch (e) {
+        console.error("Sync error:", e);
     }
 }
 
@@ -58,7 +86,6 @@ function showSetupUI(msg) {
     document.getElementById('setup-ui').style.display = 'block';
     document.getElementById('welcome-msg').innerText = msg;
     
-    // 新しい名前キーから取得
     const savedName = localStorage.getItem(NAME_KEY);
     if(savedName) document.getElementById('display-name').value = savedName;
 }
@@ -71,7 +98,6 @@ function startGame() {
         alert("名前を入力してください");
         return;
     }
-    // 新しいキーで名前を保存
     localStorage.setItem(NAME_KEY, nameInput);
     
     ui.startScreen.style.opacity = '0';
@@ -135,7 +161,6 @@ function handleIncorrect() {
     target.classList.remove('fade-out');
     target.classList.add('correct-answer');
 
-    // ログイン済み かつ 記録更新時のみ自動保存
     if (!state.isGuest && state.user && isNewBest) {
         saveWorldRecord();
     }
@@ -155,7 +180,7 @@ async function saveWorldRecord() {
             score: state.score,
             timestamp: window.fb.serverTimestamp()
         });
-        console.log("Ranking updated!");
+        console.log("Account record updated on Cloud!");
     } catch (e) {
         console.error("Save error", e);
     }
@@ -193,7 +218,6 @@ function showResult(isNewBest) {
 
     if (isNewBest) {
         state.bestScore = state.score;
-        // 新しいキーでベストスコアを保存
         localStorage.setItem(STORAGE_KEY, state.bestScore);
         document.getElementById('new-record-label').style.display = 'block';
         createFirework();
@@ -201,7 +225,6 @@ function showResult(isNewBest) {
         document.getElementById('new-record-label').style.display = 'none';
     }
 
-    // ゲストならログイン勧誘を表示
     ui.loginNotice.style.display = (!state.user) ? 'block' : 'none';
 
     loadWorldRanking();
@@ -217,7 +240,7 @@ function showResult(isNewBest) {
     setTimeout(() => ui.overlay.classList.add('visible'), 50);
 }
 
-// --- Others ---
+// --- Utils ---
 
 function getRankInfo(diff, score) {
     if (score >= 100) return { rank: "👁️‍🗨️ 神の目", msg: "真理の到達者。1.8度の深淵を見通す、神の領域。" };
