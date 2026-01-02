@@ -14,6 +14,7 @@
     </div>
 
     <div id="game-board"></div>
+    <button id="back-to-result" onclick="showResult(false)">結果に戻る</button>
 
     <div id="start-screen">
         <h1 class="game-title">HUE<br>HUNTER</h1>
@@ -25,34 +26,29 @@
             </div>
 
             <div id="setup-ui" style="display:none;">
-                <p id="welcome-msg" style="margin-bottom:15px; font-size: 0.9rem; color: var(--accent-color);"></p>
-                <input type="text" id="display-name" placeholder="表示名を入力" maxlength="8" 
-                       style="padding:12px; border-radius:25px; border:1px solid var(--accent-color); background:rgba(255,255,255,0.1); color:white; text-align:center; width: 180px; outline: none; margin-bottom: 20px;">
+                <p id="welcome-msg"></p>
+                <input type="text" id="display-name" placeholder="表示名を入力" maxlength="8">
                 <br>
                 <button class="btn-start" onclick="startGame()">ゲーム開始</button>
             </div>
         </div>
     </div>
 
-    <button id="back-to-result" onclick="showResult(false)">結果に戻る</button>
-
     <div id="result-overlay">
-        <div id="new-record-label" style="display:none; color: #ffd700; font-weight: 900; margin-bottom: 10px; font-size: 1.2rem; text-shadow: 0 0 10px rgba(255,215,0,0.5);">★ NEW WORLD RECORD ★</div>
+        <div id="new-record-label" style="display:none;">★ NEW WORLD RECORD ★</div>
         <div id="res-rank" class="rank-name">---</div>
         <div id="res-msg" class="msg-text">---</div>
 
-        <div id="ranking-container" style="width: 280px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; margin-bottom: 20px; font-size: 0.85rem;">
-            <div style="border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px; margin-bottom: 10px; font-weight: bold; color: var(--accent-color); display: flex; justify-content: space-between;">
+        <div id="ranking-container">
+            <div id="ranking-header">
                 <span>WORLD TOP 5</span>
-                <span id="login-status" style="font-size: 0.6rem; color: #888;">Checking...</span>
+                <span id="login-status">Checking...</span>
             </div>
             <div id="ranking-list">Loading rankings...</div>
         </div>
 
-        <div id="guest-login-notice" style="display:none; margin-bottom: 20px;">
-            <button onclick="login()" style="font-size: 0.75rem; background:white; color:black; border:none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer;">
-                Googleログインして同期を有効化
-            </button>
+        <div id="guest-login-notice" style="display:none;">
+            <button onclick="login()" class="btn-sync-notice">Googleログインして同期を有効化</button>
         </div>
 
         <div class="result-stats">
@@ -75,7 +71,6 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        // ★ getDoc を追加しました
         import { getFirestore, collection, doc, setDoc, getDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -91,7 +86,6 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // ★ window.fb に getDoc を追加しました
         window.fb = { auth, db, GoogleAuthProvider, signInWithPopup, collection, doc, setDoc, getDoc, query, orderBy, limit, getDocs, serverTimestamp };
 
         onAuthStateChanged(auth, (user) => {

@@ -1,5 +1,5 @@
-const STORAGE_KEY = 'hueHunter_v3_best'; // バージョンを上げて完全リセット
-const NAME_KEY = 'hueHunter_v3_name';
+const STORAGE_KEY = 'hueHunter_v5_best';
+const NAME_KEY = 'hueHunter_v5_name';
 
 const state = {
     score: 0,
@@ -33,7 +33,6 @@ async function login() {
         state.user = result.user;
         state.isGuest = false;
 
-        // ★ クラウドからベスト記録を同期する処理
         await syncCloudRecord();
         
         showSetupUI(`Hello, ${state.user.displayName}`);
@@ -50,7 +49,6 @@ async function login() {
 async function syncCloudRecord() {
     if (!state.user) return;
     try {
-        // Firestoreから自分のUIDのドキュメントを直接取得
         const docRef = window.fb.doc(window.fb.db, "rankings", state.user.uid);
         const docSnap = await window.fb.getDoc(docRef);
 
@@ -59,13 +57,10 @@ async function syncCloudRecord() {
             const cloudBest = data.score;
             const cloudName = data.name;
 
-            // クラウドのスコアが高ければローカルを更新
             if (cloudBest > state.bestScore) {
                 state.bestScore = cloudBest;
                 localStorage.setItem(STORAGE_KEY, state.bestScore);
-                console.log("Best score synced from cloud:", cloudBest);
             }
-            // クラウドに保存されていた名前をセット
             if (cloudName) {
                 localStorage.setItem(NAME_KEY, cloudName);
             }
@@ -83,7 +78,7 @@ function continueAsGuest() {
 
 function showSetupUI(msg) {
     document.getElementById('login-options').style.display = 'none';
-    document.getElementById('setup-ui').style.display = 'block';
+    document.getElementById('setup-ui').style.display = 'flex'; // センター寄せ維持のためflex
     document.getElementById('welcome-msg').innerText = msg;
     
     const savedName = localStorage.getItem(NAME_KEY);
@@ -112,8 +107,8 @@ function renderGame() {
     ui.board.innerHTML = '';
     
     const h = Math.floor(Math.random() * 360);
-    const s = Math.floor(Math.random() * 10) + 75; 
-    const l = Math.floor(Math.random() * 10) + 45; 
+    const s = 80; 
+    const l = 50; 
 
     const d = state.currentDiff; 
     const sign = Math.random() < 0.5 ? 1 : -1;
@@ -126,9 +121,12 @@ function renderGame() {
     for (let i = 0; i < 25; i++) {
         const block = document.createElement('div');
         block.className = 'block';
+        
+        // 左上から順に表示するための計算
         const row = Math.floor(i / 5);
         const col = i % 5;
-        block.style.animationDelay = `${(row + col) * 0.05}s`;
+        block.style.animationDelay = `${(row + col) * 0.04}s`;
+        
         block.style.backgroundColor = (i === correctIndex) ? targetColor : baseColor;
         if (i === correctIndex) block.id = "target";
 
@@ -144,11 +142,8 @@ function renderGame() {
 function handleCorrect() {
     state.score++;
     ui.score.innerText = state.score;
-    if (state.score < 90) {
-        state.currentDiff = Math.max(2.0, 15 * Math.pow(0.978, state.score));
-    } else {
-        state.currentDiff = Math.max(1.8, state.currentDiff - 0.02);
-    }
+    // 以前の難易度カーブを維持
+    state.currentDiff = Math.max(1.8, 15 * Math.pow(0.978, state.score));
     renderGame();
 }
 
@@ -165,7 +160,7 @@ function handleIncorrect() {
         saveWorldRecord();
     }
 
-    setTimeout(() => showResult(isNewBest), 1000);
+    setTimeout(() => showResult(isNewBest), 800);
 }
 
 // --- Online Service ---
@@ -180,7 +175,6 @@ async function saveWorldRecord() {
             score: state.score,
             timestamp: window.fb.serverTimestamp()
         });
-        console.log("Account record updated on Cloud!");
     } catch (e) {
         console.error("Save error", e);
     }
@@ -191,20 +185,39 @@ async function loadWorldRanking() {
     try {
         const q = window.fb.query(
             window.fb.collection(window.fb.db, "rankings"),
-            window.fb.orderBy("score", "desc"),
-            window.fb.limit(5)
+            window.fb.orderBy("score", "desc")
         );
         const snap = await window.fb.getDocs(q);
+        
         let html = "";
-        let i = 1;
+        let rank = 1;
+        let myRankData = null;
+        const topLimit = 5;
+
         snap.forEach(doc => {
             const data = doc.data();
-            html += `<div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                        <span>${i}. ${data.name}</span>
-                        <span style="color:var(--accent-color); font-weight:bold;">${data.score}</span>
-                     </div>`;
-            i++;
+            const isMe = state.user && doc.id === state.user.uid;
+
+            if (rank <= topLimit) {
+                html += `<div style="display:flex; justify-content:space-between; margin-bottom:4px; ${isMe ? 'color:var(--accent-color); font-weight:bold;' : ''}">
+                            <span>${rank}. ${data.name}${isMe ? ' (You)' : ''}</span>
+                            <span>${data.score}</span>
+                         </div>`;
+            }
+            if (isMe) {
+                myRankData = { rank, score: data.score, name: data.name };
+            }
+            rank++;
         });
+
+        if (myRankData && myRankData.rank > topLimit) {
+            html += `<div style="border-top: 1px dashed rgba(255,255,255,0.3); margin: 8px 0; padding-top: 8px;"></div>
+                     <div style="display:flex; justify-content:space-between; color:var(--accent-color); font-weight:bold;">
+                        <span>${myRankData.rank}. ${myRankData.name} (You)</span>
+                        <span>${myRankData.score}</span>
+                     </div>`;
+        }
+
         listEl.innerHTML = html || "No records yet";
     } catch (e) {
         listEl.innerHTML = "Error loading ranking";
@@ -214,8 +227,7 @@ async function loadWorldRanking() {
 function showResult(isNewBest) {
     state.isPeeking = false;
     ui.backBtn.classList.remove('visible');
-    const info = getRankInfo(state.currentDiff, state.score);
-
+    
     if (isNewBest) {
         state.bestScore = state.score;
         localStorage.setItem(STORAGE_KEY, state.bestScore);
@@ -229,6 +241,8 @@ function showResult(isNewBest) {
 
     loadWorldRanking();
 
+    // ランク判定を元の詳細なものに戻しました
+    const info = getRankInfo(state.score);
     ui.resRank.innerText = info.rank;
     if (state.score >= 100) ui.resRank.classList.add('gold-text');
     else ui.resRank.classList.remove('gold-text');
@@ -236,13 +250,14 @@ function showResult(isNewBest) {
     ui.resScore.innerText = state.score;
     ui.resBest.innerText = state.bestScore;
     ui.resMsg.innerText = info.msg;
+    
     ui.overlay.style.display = 'flex';
-    setTimeout(() => ui.overlay.classList.add('visible'), 50);
+    setTimeout(() => ui.overlay.classList.add('visible'), 10);
 }
 
 // --- Utils ---
 
-function getRankInfo(diff, score) {
+function getRankInfo(score) {
     if (score >= 100) return { rank: "👁️‍🗨️ 神の目", msg: "真理の到達者。1.8度の深淵を見通す、神の領域。" };
     if (score >= 90)  return { rank: "🌌 色彩の特異点", msg: "デバイスの限界を超え、色の法則を書き換えた。" };
     if (score >= 75)  return { rank: "✨ 聖域の色彩", msg: "人間卒業。色の粒子が放つ微細な鼓動を捉えている。" };

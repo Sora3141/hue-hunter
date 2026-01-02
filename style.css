@@ -14,20 +14,18 @@ body {
     padding: 0;
     background-color: var(--bg-color);
     color: var(--text-color);
-    font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+    font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    height: 100dvh; /* スマホのアドレスバーを除いた動的な高さ */
+    height: 100dvh;
     overflow: hidden;
     align-items: center;
 }
 
-/* ヘッダーエリア */
 .header {
     width: 100%;
     text-align: center;
-    padding-top: env(safe-area-inset-top); /* ノッチ対策 */
+    padding-top: env(safe-area-inset-top);
     margin-top: 20px;
     z-index: 10;
 }
@@ -36,56 +34,61 @@ body {
     font-size: 0.8rem;
     letter-spacing: 0.2rem;
     color: var(--accent-color);
-    opacity: 0.8;
 }
 
 #score-display {
     margin: 0;
-    font-size: 3rem;
+    font-size: 3.5rem;
     font-weight: 900;
     text-shadow: 0 0 20px rgba(0, 242, 255, 0.5);
 }
 
-/* ゲーム盤面：画面の残りの中央に配置 */
 #game-board {
     flex: 1;
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     grid-template-rows: repeat(5, 1fr);
-    gap: 8px;
+    gap: 10px; /* 感覚を少し広げてスッキリさせる */
     padding: 20px;
-    place-content: center; /* グリッド自体を中央へ */
-    width: 100%;
-    max-width: 500px;
+    width: 85vw; /* 95から85に下げて小さく */
+    max-width: 400px; /* PCでも一回り小さく */
+    aspect-ratio: 1 / 1;
+    margin: auto;
+    place-content: center;
 }
 
 .block {
-    width: calc(85vw / 5);
-    height: calc(85vw / 5);
-    max-width: 80px;
-    max-height: 80px;
-    border-radius: 12px;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 8px; /* 角丸を少し控えめに */
     cursor: pointer;
     transition: transform 0.1s;
+    /* 左上から順に出るためのアニメーション */
     animation: fadeIn 0.4s ease-out backwards;
 }
 
-.block:active {
-    transform: scale(0.92);
-}
+.block:active { transform: scale(0.92); }
 
-/* スタート画面・ログインUI */
 #start-screen {
     position: fixed;
     inset: 0;
-    background: var(--bg-color);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    z-index: 100;
-    transition: opacity 0.5s;
     padding: 20px;
+    background: var(--bg-color);
+    z-index: 1000;
+    transition: opacity 0.5s;
+}
+
+#auth-ui, #setup-ui, #login-options {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 12px;
 }
 
 .game-title {
@@ -93,51 +96,44 @@ body {
     line-height: 0.9;
     margin-bottom: 40px;
     text-align: center;
-    letter-spacing: -0.1rem;
     background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
-#auth-ui {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
+#display-name {
+    padding: 12px;
+    border-radius: 25px;
+    border: 1px solid var(--accent-color);
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    text-align: center;
+    width: 220px;
+    outline: none;
+    margin-bottom: 20px;
+    font-size: 1rem;
 }
 
-#login-options {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
+#welcome-msg {
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+    color: var(--accent-color);
 }
 
-/* ボタン共通設定 */
 .btn-start, .btn-look, .btn-restart {
-    padding: 16px 40px;
+    padding: 16px;
     border-radius: 30px;
     border: none;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: bold;
     cursor: pointer;
-    transition: all 0.2s;
-    width: 240px; /* 横幅を統一してセンターに */
+    width: 240px;
 }
 
-.btn-start {
-    background: var(--accent-color);
-    color: #000;
-}
+.btn-start { background: var(--accent-color); color: #000; }
+.btn-look { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
 
-.btn-look {
-    background: rgba(255,255,255,0.1);
-    color: #fff;
-    border: 1px solid rgba(255,255,255,0.2);
-}
-
-/* リザルト画面 */
 #result-overlay {
     position: fixed;
     inset: 0;
@@ -146,98 +142,80 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    z-index: 200;
+    z-index: 2000;
     opacity: 0;
     transition: opacity 0.3s;
-    padding: 20px;
 }
 
 #result-overlay.visible {
+    display: flex !important;
     opacity: 1;
 }
 
-.rank-name {
-    font-size: 2.2rem;
-    font-weight: 900;
-    margin-bottom: 5px;
+#ranking-container {
+    width: 280px;
+    background: rgba(255,255,255,0.05);
+    padding: 15px;
+    border-radius: 15px;
+    margin-bottom: 20px;
 }
 
-.gold-text {
-    background: linear-gradient(to bottom, #ffd700, #ff8c00);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.msg-text {
-    font-size: 0.9rem;
-    color: #ccc;
-    margin-bottom: 25px;
-    text-align: center;
-}
-
-.result-stats {
-    display: flex;
-    gap: 30px;
-    margin-bottom: 30px;
-}
-
-.stat-item {
-    text-align: center;
-}
-
-.stat-label {
-    display: block;
-    font-size: 0.7rem;
+#ranking-header {
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+    padding-bottom: 5px;
+    margin-bottom: 10px;
     color: var(--accent-color);
-    margin-bottom: 5px;
-}
-
-.stat-value {
-    font-size: 1.8rem;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
     font-weight: bold;
 }
 
-.btn-group {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+.btn-sync-notice {
+    font-size: 0.75rem;
+    background: white;
+    color: black;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    margin-bottom: 20px;
 }
 
-/* 戻るボタン */
 #back-to-result {
     position: fixed;
-    bottom: 30px;
+    bottom: 40px;
     left: 50%;
     transform: translateX(-50%);
-    padding: 10px 20px;
-    border-radius: 20px;
+    padding: 12px 24px;
+    border-radius: 30px;
     background: var(--accent-color);
     color: #000;
     border: none;
     font-weight: bold;
     display: none;
-    z-index: 300;
+    z-index: 3000;
 }
 
-#back-to-result.visible {
-    display: block;
-}
+#back-to-result.visible { display: block !important; }
 
-/* アニメーション */
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.8); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-.fade-out {
-    opacity: 0.2;
-    transform: scale(0.9);
-    transition: all 0.5s;
-}
-
+/* 間違えた時の演出：拡大のみ（縁や影はなし） */
 .correct-answer {
-    box-shadow: 0 0 20px #fff;
-    transform: scale(1.1);
+    transform: scale(1.15);
     z-index: 5;
-    border: 2px solid #fff;
+    /* box-shadow や border は削除しました */
+}
+.fade-out { opacity: 0.2; transform: scale(0.9); transition: 0.5s; }
+#new-record-label { color: #ffd700; font-weight: 900; margin-bottom: 10px; }
+.result-stats { display: flex; gap: 30px; margin-bottom: 25px; }
+
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(10px) scale(0.9); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0) scale(1); 
+    }
 }
