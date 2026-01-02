@@ -26,8 +26,17 @@
                 <div id="login-options">
                     <button id="btn-google-login" class="btn-start" onclick="login()">Googleでログイン</button>
                     <button id="btn-guest" class="btn-look" onclick="continueAsGuest()">ログインせずに遊ぶ</button>
-                    <p class="auth-notice">※ログインするとデバイス間で最高記録を同期できます</p>
+                    
+                    <button id="btn-show-ranking" class="btn-ranking-toggle" onclick="toggleStartRanking()">🏆 世界ランキングを表示</button>
+
+                    <div id="start-ranking-container" class="ranking-box" style="display:none;">
+                        <div class="ranking-header">WORLD TOP 5</div>
+                        <div id="start-ranking-list" class="ranking-list-text">Loading...</div>
+                    </div>
+
+                    <p class="auth-notice">※ログインすると記録を同期できます</p>
                 </div>
+
                 <div id="setup-ui" style="display:none;">
                     <p id="welcome-msg"></p>
                     <input type="text" id="display-name" placeholder="表示名を入力" maxlength="8">
@@ -41,12 +50,12 @@
             <div id="res-rank" class="rank-name">---</div>
             <div id="res-msg" class="msg-text">---</div>
 
-            <div id="ranking-container">
-                <div id="ranking-header">
+            <div id="ranking-container" class="ranking-box">
+                <div id="ranking-header-res" class="ranking-header">
                     <span>WORLD TOP 5</span>
-                    <span id="login-status">Checking...</span>
+                    <span id="login-status-res" style="font-size:0.6rem;">---</span>
                 </div>
-                <div id="ranking-list">Loading rankings...</div>
+                <div id="ranking-list" class="ranking-list-text">Loading rankings...</div>
             </div>
 
             <div id="ad-space">
@@ -95,13 +104,13 @@
         window.fb = { auth, db, GoogleAuthProvider, signInWithPopup, collection, doc, setDoc, getDoc, query, orderBy, limit, getDocs, serverTimestamp };
 
         onAuthStateChanged(auth, (user) => {
-            const status = document.getElementById('login-status');
-            if (user) {
-                status.innerText = "Logged In";
-                status.style.color = "#4CAF50";
-            } else {
-                status.innerText = "Guest Mode";
-                status.style.color = "#888";
+            const statusEl = document.getElementById('login-status-res');
+            if (user && statusEl) {
+                statusEl.innerText = "Logged In";
+                statusEl.style.color = "#4CAF50";
+            } else if (statusEl) {
+                statusEl.innerText = "Guest Mode";
+                statusEl.style.color = "#888";
             }
         });
     </script>

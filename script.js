@@ -33,12 +33,9 @@ async function login() {
         state.user = result.user;
         state.isGuest = false;
 
-        // ログイン時にクラウドの記録と同期
         await syncCloudRecord();
-        
         showSetupUI(`Hello, ${state.user.displayName}`);
         
-        // もしリザルト画面でログインした場合、即座にランキング更新
         if (state.isGameOver && state.score >= state.bestScore && state.score > 0) {
             saveWorldRecord();
             ui.loginNotice.style.display = 'none';
@@ -56,18 +53,11 @@ async function syncCloudRecord() {
 
         if (docSnap.exists()) {
             const data = docSnap.data();
-            const cloudBest = data.score;
-            const cloudName = data.name;
-
-            // クラウドの方が記録が高ければローカルを上書き
-            if (cloudBest > state.bestScore) {
-                state.bestScore = cloudBest;
+            if (data.score > state.bestScore) {
+                state.bestScore = data.score;
                 localStorage.setItem(STORAGE_KEY, state.bestScore);
             }
-            // 名前も同期
-            if (cloudName) {
-                localStorage.setItem(NAME_KEY, cloudName);
-            }
+            if (data.name) localStorage.setItem(NAME_KEY, data.name);
         }
     } catch (e) {
         console.error("Sync error:", e);
@@ -107,7 +97,6 @@ function startGame() {
 }
 
 function renderGame() {
-    // 盤面確認中以外でゲームオーバーなら描画しない
     if (state.isGameOver && !state.isPeeking) return;
     ui.board.innerHTML = '';
     
@@ -115,19 +104,11 @@ function renderGame() {
     const s = 80; 
     const l = 50; 
 
-    // --- マクアダム楕円理論に基づく知覚的な難易度補正 ---
     let multiplier = 1.0;
-    if (h >= 80 && h <= 165) {
-        multiplier = 1.8; // 緑エリア：最も鈍感なため大きく補正
-    } else if (h >= 166 && h <= 210) {
-        multiplier = 1.3; // シアンエリア
-    } else if (h >= 211 && h <= 280) {
-        multiplier = 1.2; // 青・紫エリア
-    } else {
-        multiplier = 1.0; // 赤・黄エリア（基準）
-    }
+    if (h >= 80 && h <= 165) multiplier = 1.8;
+    else if (h >= 166 && h <= 210) multiplier = 1.3;
+    else if (h >= 211 && h <= 280) multiplier = 1.2;
 
-    // 補正倍率を適用した難易度(d)
     const d = state.currentDiff * multiplier; 
     const sign = Math.random() < 0.5 ? 1 : -1;
     const targetH = (h + (d * sign) + 360) % 360;
@@ -140,7 +121,7 @@ function renderGame() {
         const block = document.createElement('div');
         block.className = 'block';
         
-        // だららっ演出（左上から右下へ）
+        // だららっ演出の復活
         const row = Math.floor(i / 5);
         const col = i % 5;
         block.style.animationDelay = `${(row + col) * 0.04}s`;
@@ -148,14 +129,11 @@ function renderGame() {
         block.style.backgroundColor = (i === correctIndex) ? targetColor : baseColor;
         if (i === correctIndex) block.id = "target";
         
-        // クリックイベント
         block.onclick = () => {
-            // ★重要：盤面確認モード(GameOver状態)ではクリックを無効化
             if (state.isGameOver) return; 
             (i === correctIndex) ? handleCorrect() : handleIncorrect();
         };
 
-        // 盤面確認時の正解表示
         if (state.isGameOver && i === correctIndex) {
             block.classList.add('correct-answer');
         }
@@ -166,7 +144,6 @@ function renderGame() {
 function handleCorrect() {
     state.score++;
     ui.score.innerText = state.score;
-    // 難易度曲線
     state.currentDiff = Math.max(1.8, 15 * Math.pow(0.978, state.score));
     renderGame();
 }
@@ -175,14 +152,13 @@ function handleIncorrect() {
     state.isGameOver = true;
     const isNewBest = state.score > state.bestScore;
     
-    // 不正解のブロックを薄くする
     document.querySelectorAll('.block').forEach(b => b.classList.add('fade-out'));
-    // 正解のブロックだけ強調
     const target = document.getElementById('target');
-    target.classList.remove('fade-out');
-    target.classList.add('correct-answer');
+    if (target) {
+        target.classList.remove('fade-out');
+        target.classList.add('correct-answer');
+    }
 
-    // ログイン済みならクラウドに記録
     if (!state.isGuest && state.user && isNewBest) {
         saveWorldRecord();
     }
@@ -190,7 +166,21 @@ function handleIncorrect() {
     setTimeout(() => showResult(isNewBest), 800);
 }
 
-// --- Online Ranking ---
+// --- Online Ranking & UI ---
+
+function toggleStartRanking() {
+    const container = document.getElementById('start-ranking-container');
+    const btn = document.getElementById('btn-show-ranking');
+
+    if (container.style.display === 'none') {
+        container.style.display = 'block';
+        btn.innerText = '✖ ランキングを閉じる';
+        loadWorldRanking(); 
+    } else {
+        container.style.display = 'none';
+        btn.innerText = '🏆 世界ランキングを表示';
+    }
+}
 
 async function saveWorldRecord() {
     if (!state.user) return;
@@ -209,10 +199,13 @@ async function saveWorldRecord() {
 
 async function loadWorldRanking() {
     const listEl = document.getElementById('ranking-list');
+    const startListEl = document.getElementById('start-ranking-list');
+    
     try {
         const q = window.fb.query(
             window.fb.collection(window.fb.db, "rankings"),
-            window.fb.orderBy("score", "desc")
+            window.fb.orderBy("score", "desc"),
+            window.fb.limit(10) // 内部的には10位まで取得
         );
         const snap = await window.fb.getDocs(q);
         
@@ -225,21 +218,16 @@ async function loadWorldRanking() {
             const data = doc.data();
             const isMe = state.user && doc.id === state.user.uid;
 
-            // TOP 5 表示
             if (rank <= topLimit) {
                 html += `<div style="display:flex; justify-content:space-between; margin-bottom:4px; ${isMe ? 'color:var(--accent-color); font-weight:bold;' : ''}">
                             <span>${rank}. ${data.name}${isMe ? ' (You)' : ''}</span>
                             <span>${data.score}</span>
                          </div>`;
             }
-            // 自分のランクを保存
-            if (isMe) {
-                myRankData = { rank, score: data.score, name: data.name };
-            }
+            if (isMe) myRankData = { rank, score: data.score, name: data.name };
             rank++;
         });
 
-        // 自分がランク外(6位以下)なら下に表示
         if (myRankData && myRankData.rank > topLimit) {
             html += `<div style="border-top: 1px dashed rgba(255,255,255,0.3); margin: 8px 0; padding-top: 8px;"></div>
                      <div style="display:flex; justify-content:space-between; color:var(--accent-color); font-weight:bold;">
@@ -248,9 +236,11 @@ async function loadWorldRanking() {
                      </div>`;
         }
 
-        listEl.innerHTML = html || "No records yet";
+        const finalHtml = html || "No records yet";
+        if (listEl) listEl.innerHTML = finalHtml;
+        if (startListEl) startListEl.innerHTML = finalHtml;
     } catch (e) {
-        listEl.innerHTML = "Error loading ranking";
+        console.error("Ranking load error:", e);
     }
 }
 
@@ -273,7 +263,6 @@ function showResult(isNewBest) {
 
     const info = getRankInfo(state.score);
     ui.resRank.innerText = info.rank;
-    // 100点以上で金文字クラス付与
     if (state.score >= 100) ui.resRank.classList.add('gold-text');
     else ui.resRank.classList.remove('gold-text');
 
@@ -285,7 +274,7 @@ function showResult(isNewBest) {
     setTimeout(() => ui.overlay.classList.add('visible'), 10);
 }
 
-// --- Utils ---
+// --- Utils & UI Control ---
 
 function getRankInfo(score) {
     if (score >= 100) return { rank: "👁️‍🗨️ 神の目", msg: "真理の到達者。色彩の深淵を見通す、神の領域。" };
@@ -303,7 +292,7 @@ function createFirework() {
         const p = document.createElement('div');
         document.body.appendChild(p);
         const x = window.innerWidth / 2, y = window.innerHeight / 2;
-        p.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:6px;height:6px;background:hsl(${Math.random()*360},100%,60%);border-radius:50%;z-index:1000;pointer-events:none;`;
+        p.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:6px;height:6px;background:hsl(${Math.random()*360},100%,60%);border-radius:50%;z-index:3000;pointer-events:none;`;
         const angle = Math.random()*Math.PI*2, v = Math.random()*12+4;
         let vx = Math.cos(angle)*v, vy = Math.sin(angle)*v, op = 1;
         const anim = () => {
@@ -319,9 +308,7 @@ function createFirework() {
 
 function peekBoard() {
     state.isPeeking = true;
-    // フェードアウト状態を解除して盤面を見やすくする
     document.querySelectorAll('.block').forEach(b => b.classList.remove('fade-out'));
-    
     ui.overlay.classList.remove('visible');
     setTimeout(() => { 
         ui.overlay.style.display = 'none'; 
@@ -329,17 +316,28 @@ function peekBoard() {
     }, 300);
 }
 
+function showResultFromPeek() {
+    state.isPeeking = false;
+    ui.backBtn.classList.remove('visible');
+    ui.overlay.style.display = 'flex';
+    setTimeout(() => ui.overlay.classList.add('visible'), 10);
+}
+
+// ボタンのonclick属性がグローバル関数を呼ぶため window に登録
+window.showResult = showResultFromPeek;
+
 function resetGame() {
     state.score = 0; 
     state.currentDiff = 15; 
     state.isGameOver = false; 
     state.isPeeking = false;
-    
     ui.score.innerText = 0; 
     ui.overlay.classList.remove('visible');
-    
     setTimeout(() => { 
         ui.overlay.style.display = 'none'; 
         renderGame(); 
     }, 300);
 }
+
+// 起動時にランキングを1回取得（Firebase準備待ち）
+setTimeout(loadWorldRanking, 2000);
