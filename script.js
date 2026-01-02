@@ -1,6 +1,11 @@
+// 新しい管理キー（これまでの 'hueHunterBest' とは別の名前）
+const STORAGE_KEY = 'hueHunter_v2_best';
+const NAME_KEY = 'hueHunter_v2_name';
+
 const state = {
     score: 0,
-    bestScore: parseInt(localStorage.getItem('hueHunterBest')) || 0,
+    // 新しいキーから読み込む。データがなければ 0 になる。
+    bestScore: parseInt(localStorage.getItem(STORAGE_KEY)) || 0,
     currentDiff: 15,
     isGameOver: false,
     isPeeking: false,
@@ -53,7 +58,8 @@ function showSetupUI(msg) {
     document.getElementById('setup-ui').style.display = 'block';
     document.getElementById('welcome-msg').innerText = msg;
     
-    const savedName = localStorage.getItem('hueHunterPlayerName');
+    // 新しい名前キーから取得
+    const savedName = localStorage.getItem(NAME_KEY);
     if(savedName) document.getElementById('display-name').value = savedName;
 }
 
@@ -65,7 +71,8 @@ function startGame() {
         alert("名前を入力してください");
         return;
     }
-    localStorage.setItem('hueHunterPlayerName', nameInput);
+    // 新しいキーで名前を保存
+    localStorage.setItem(NAME_KEY, nameInput);
     
     ui.startScreen.style.opacity = '0';
     setTimeout(() => {
@@ -140,7 +147,7 @@ function handleIncorrect() {
 
 async function saveWorldRecord() {
     if (!state.user) return;
-    const playerName = localStorage.getItem('hueHunterPlayerName') || "Unknown";
+    const playerName = localStorage.getItem(NAME_KEY) || "Unknown";
     try {
         const docRef = window.fb.doc(window.fb.db, "rankings", state.user.uid);
         await window.fb.setDoc(docRef, {
@@ -186,7 +193,8 @@ function showResult(isNewBest) {
 
     if (isNewBest) {
         state.bestScore = state.score;
-        localStorage.setItem('hueHunterBest', state.bestScore);
+        // 新しいキーでベストスコアを保存
+        localStorage.setItem(STORAGE_KEY, state.bestScore);
         document.getElementById('new-record-label').style.display = 'block';
         createFirework();
     } else {
