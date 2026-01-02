@@ -26,18 +26,27 @@
                 <div id="login-options">
                     <button id="btn-google-login" class="btn-start" onclick="login()">Googleでログイン</button>
                     <button id="btn-guest" class="btn-look" onclick="continueAsGuest()">ログインせずに遊ぶ</button>
+                    
                     <button id="btn-show-ranking" class="btn-ranking-toggle" onclick="toggleStartRanking()">🏆 ランキングを表示</button>
+
                     <div id="start-ranking-container" class="ranking-box" style="display:none;">
                         <div class="ranking-header">RANKING TOP 5</div>
                         <div id="start-ranking-list" class="ranking-list-text">Loading...</div>
                     </div>
+
                     <p class="auth-notice">※ログインすると記録を同期できます</p>
-                     <div id="version-display">v1.0.0</div>
                 </div>
+
                 <div id="setup-ui" style="display:none;">
                     <p id="welcome-msg"></p>
                     <input type="text" id="display-name" placeholder="表示名を入力" maxlength="8">
                     <button class="btn-start" onclick="startGame()">ゲーム開始</button>
+
+                    <button id="btn-show-ranking-setup" class="btn-ranking-toggle" onclick="toggleSetupRanking()">🏆 ランキングを表示</button>
+                    <div id="setup-ranking-container" class="ranking-box" style="display:none;">
+                        <div class="ranking-header">RANKING TOP 5</div>
+                        <div id="setup-ranking-list" class="ranking-list-text">Loading...</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -46,6 +55,7 @@
             <div id="new-record-label" style="display:none;">★ NEW RECORD ★</div>
             <div id="res-rank" class="rank-name">---</div>
             <div id="res-msg" class="msg-text">---</div>
+
             <div id="ranking-container" class="ranking-box">
                 <div id="ranking-header-res" class="ranking-header">
                     <span>RANKING TOP 5</span>
@@ -53,21 +63,33 @@
                 </div>
                 <div id="ranking-list" class="ranking-list-text">Loading...</div>
             </div>
+
             <div id="ad-space">
                 <script src="https://adm.shinobi.jp/s/fbe3608133af14816ff830129b4da30b"></script>
             </div>
+
             <div id="guest-login-notice" style="display:none;">
                 <button onclick="login()" class="btn-sync-notice">Googleログインして同期を有効化</button>
             </div>
+
             <div class="result-stats">
-                <div class="stat-item"><span class="stat-label">SCORE</span><span id="res-score" class="stat-value">0</span></div>
-                <div class="stat-item"><span class="stat-label">BEST</span><span id="res-best" class="stat-value">0</span></div>
+                <div class="stat-item">
+                    <span class="stat-label">SCORE</span>
+                    <span id="res-score" class="stat-value">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">BEST</span>
+                    <span id="res-best" class="stat-value">0</span>
+                </div>
             </div>
+
             <div class="btn-group">
                 <button class="btn-restart" onclick="resetGame()">もう一度挑戦</button>
                 <button class="btn-look" onclick="peekBoard()">盤面を確認する</button>
             </div>
         </div>
+
+        <div id="version-display">v6.0.0</div>
     </div>
 
     <script type="module">
@@ -87,7 +109,12 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        window.fb = { auth, db, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, collection, doc, setDoc, getDoc, query, orderBy, limit, getDocs, serverTimestamp };
+        
+        window.fb = { 
+            auth, db, GoogleAuthProvider, signInWithPopup, 
+            signInWithRedirect, getRedirectResult, onAuthStateChanged,
+            collection, doc, setDoc, getDoc, query, orderBy, limit, getDocs, serverTimestamp 
+        };
     </script>
     <script src="script.js"></script>
 </body>
