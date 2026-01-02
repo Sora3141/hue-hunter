@@ -26,12 +26,14 @@
                 <div id="login-options">
                     <button id="btn-google-login" class="btn-start" onclick="login()">Googleでログイン</button>
                     <button id="btn-guest" class="btn-look" onclick="continueAsGuest()">ログインせずに遊ぶ</button>
+                    
                     <button id="btn-show-ranking" class="btn-ranking-toggle" onclick="toggleStartRanking()">🏆 ランキングを表示</button>
 
                     <div id="start-ranking-container" class="ranking-box" style="display:none;">
                         <div class="ranking-header">RANKING TOP 5</div>
-                        <div id="start-ranking-list" class="ranking-list-text">Loading rankings...</div>
+                        <div id="start-ranking-list" class="ranking-list-text">Loading...</div>
                     </div>
+
                     <p class="auth-notice">※ログインすると記録を同期できます</p>
                 </div>
 
@@ -65,8 +67,14 @@
             </div>
 
             <div class="result-stats">
-                <div class="stat-item"><span class="stat-label">SCORE</span><span id="res-score" class="stat-value">0</span></div>
-                <div class="stat-item"><span class="stat-label">BEST</span><span id="res-best" class="stat-value">0</span></div>
+                <div class="stat-item">
+                    <span class="stat-label">SCORE</span>
+                    <span id="res-score" class="stat-value">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">BEST</span>
+                    <span id="res-best" class="stat-value">0</span>
+                </div>
             </div>
 
             <div class="btn-group">
@@ -78,7 +86,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        // getRedirectResult と signInWithRedirect をインポートに追加
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -93,7 +102,13 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        window.fb = { auth, db, GoogleAuthProvider, signInWithPopup, collection, doc, setDoc, getDoc, query, orderBy, limit, getDocs, serverTimestamp };
+        
+        // window.fb にリダイレクト用の関数を登録
+        window.fb = { 
+            auth, db, GoogleAuthProvider, signInWithPopup, 
+            signInWithRedirect, getRedirectResult, 
+            collection, doc, setDoc, getDoc, query, orderBy, limit, getDocs, serverTimestamp 
+        };
 
         onAuthStateChanged(auth, (user) => {
             const statusEl = document.getElementById('login-status-res');
