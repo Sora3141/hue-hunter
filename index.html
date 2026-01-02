@@ -31,7 +31,7 @@
 
                     <div id="start-ranking-container" class="ranking-box" style="display:none;">
                         <div class="ranking-header">RANKING TOP 5</div>
-                        <div id="start-ranking-list" class="ranking-list-text">Loading...</div>
+                        <div id="start-ranking-list" class="ranking-list-text">Loading rankings...</div>
                     </div>
 
                     <p class="auth-notice">※ログインすると記録を同期できます</p>
@@ -86,9 +86,28 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        // getRedirectResult と signInWithRedirect をインポートに追加
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        // ★重要: signInWithRedirect と getRedirectResult を追加して取り込む
+        import { 
+            getAuth, 
+            GoogleAuthProvider, 
+            signInWithPopup, 
+            signInWithRedirect, 
+            getRedirectResult, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        
+        import { 
+            getFirestore, 
+            collection, 
+            doc, 
+            setDoc, 
+            getDoc, 
+            query, 
+            orderBy, 
+            limit, 
+            getDocs, 
+            serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB933UwRnTI71Vt4cNJDJxTApYtvCDBhOE",
@@ -103,11 +122,23 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        // window.fb にリダイレクト用の関数を登録
+        // ★ window.fb にリダイレクト用の部品を登録
         window.fb = { 
-            auth, db, GoogleAuthProvider, signInWithPopup, 
-            signInWithRedirect, getRedirectResult, 
-            collection, doc, setDoc, getDoc, query, orderBy, limit, getDocs, serverTimestamp 
+            auth, 
+            db, 
+            GoogleAuthProvider, 
+            signInWithPopup, 
+            signInWithRedirect, 
+            getRedirectResult, 
+            collection, 
+            doc, 
+            setDoc, 
+            getDoc, 
+            query, 
+            orderBy, 
+            limit, 
+            getDocs, 
+            serverTimestamp 
         };
 
         onAuthStateChanged(auth, (user) => {
