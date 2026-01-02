@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Hue Hunter | World</title>
+    <title>Hue Hunter | World Edition</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,10 +17,21 @@
 
     <div id="start-screen">
         <h1 class="game-title">HUE<br>HUNTER</h1>
-        <div class="rules-container">
-            <p class="rule-text">あなたの色彩は、<br><span class="highlight">どの領域？</span></p>
+        <div id="auth-ui">
+            <div id="login-options">
+                <button id="btn-google-login" class="btn-start" onclick="login()">Googleでログイン</button>
+                <button id="btn-guest" class="btn-look" style="margin-top:12px; opacity:0.8;" onclick="continueAsGuest()">ログインせずに遊ぶ</button>
+                <p style="font-size: 0.7rem; color: #888; margin-top: 15px;">※ゲストプレイは世界ランキングに登録されません</p>
+            </div>
+
+            <div id="setup-ui" style="display:none;">
+                <p id="welcome-msg" style="margin-bottom:15px; font-size: 0.9rem; color: var(--accent-color);"></p>
+                <input type="text" id="display-name" placeholder="表示名を入力" maxlength="8" 
+                       style="padding:12px; border-radius:25px; border:1px solid var(--accent-color); background:rgba(255,255,255,0.1); color:white; text-align:center; width: 180px; outline: none; margin-bottom: 20px;">
+                <br>
+                <button class="btn-start" onclick="startGame()">ゲーム開始</button>
+            </div>
         </div>
-        <button class="btn-start" onclick="startGame()">挑む</button>
     </div>
 
     <button id="back-to-result" onclick="showResult(false)">結果に戻る</button>
@@ -33,15 +44,14 @@
         <div id="ranking-container" style="width: 280px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; margin-bottom: 20px; font-size: 0.85rem;">
             <div style="border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px; margin-bottom: 10px; font-weight: bold; color: var(--accent-color); display: flex; justify-content: space-between;">
                 <span>WORLD TOP 5</span>
-                <span id="login-status" style="font-size: 0.7rem; color: #888;">Not Logged In</span>
+                <span id="login-status" style="font-size: 0.6rem; color: #888;">Checking...</span>
             </div>
             <div id="ranking-list">Loading rankings...</div>
         </div>
 
-        <div id="online-save-container" style="display: none; margin-bottom: 20px;">
-            <button onclick="loginAndSave()" style="background: white; color: black; padding: 12px 25px; border-radius: 30px; font-weight: bold; border: none; display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0 auto;">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18">
-                世界ランキングに登録
+        <div id="guest-login-notice" style="display:none; margin-bottom: 20px;">
+            <button onclick="login()" style="font-size: 0.75rem; background:white; color:black; border:none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer;">
+                Googleログインして世界ランクに参加
             </button>
         </div>
 
@@ -65,9 +75,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // ★ 空さんの Config を適用済みです
         const firebaseConfig = {
             apiKey: "AIzaSyB933UwRnTI71Vt4cNJDJxTApYtvCDBhOE",
             authDomain: "huehunterworld.firebaseapp.com",
@@ -81,15 +90,16 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // JSファイルから呼び出せるようにwindowオブジェクトに登録
-        window.fb = { auth, db, GoogleAuthProvider, signInWithPopup, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp };
+        window.fb = { auth, db, GoogleAuthProvider, signInWithPopup, collection, doc, setDoc, query, orderBy, limit, getDocs, serverTimestamp };
 
         onAuthStateChanged(auth, (user) => {
             const status = document.getElementById('login-status');
             if (user) {
-                status.innerText = `Logged in as ${user.displayName}`;
+                status.innerText = "Logged In";
+                status.style.color = "#4CAF50";
             } else {
-                status.innerText = `Not Logged In`;
+                status.innerText = "Guest Mode";
+                status.style.color = "#888";
             }
         });
     </script>

@@ -3,7 +3,9 @@ const state = {
     bestScore: parseInt(localStorage.getItem('hueHunterBest')) || 0,
     currentDiff: 15,
     isGameOver: false,
-    isPeeking: false
+    isPeeking: false,
+    user: null,
+    isGuest: false
 };
 
 const ui = {
@@ -15,10 +17,56 @@ const ui = {
     resScore: document.getElementById('res-score'),
     resBest: document.getElementById('res-best'),
     startScreen: document.getElementById('start-screen'),
-    backBtn: document.getElementById('back-to-result')
+    backBtn: document.getElementById('back-to-result'),
+    loginNotice: document.getElementById('guest-login-notice')
 };
 
+// --- Authentication & Mode Switch ---
+
+async function login() {
+    const provider = new window.fb.GoogleAuthProvider();
+    try {
+        const result = await window.fb.signInWithPopup(window.fb.auth, provider);
+        state.user = result.user;
+        state.isGuest = false;
+        
+        showSetupUI(`Hello, ${state.user.displayName}`);
+        
+        // リザルト画面でログインした時にハイスコアならその場で保存
+        if (state.isGameOver && state.score >= state.bestScore && state.score > 0) {
+            saveWorldRecord();
+            ui.loginNotice.style.display = 'none';
+        }
+    } catch (e) {
+        console.error("Login failed", e);
+    }
+}
+
+function continueAsGuest() {
+    state.isGuest = true;
+    state.user = null;
+    showSetupUI("Guest Mode");
+}
+
+function showSetupUI(msg) {
+    document.getElementById('login-options').style.display = 'none';
+    document.getElementById('setup-ui').style.display = 'block';
+    document.getElementById('welcome-msg').innerText = msg;
+    
+    const savedName = localStorage.getItem('hueHunterPlayerName');
+    if(savedName) document.getElementById('display-name').value = savedName;
+}
+
+// --- Game Core ---
+
 function startGame() {
+    const nameInput = document.getElementById('display-name').value.trim();
+    if (!nameInput) {
+        alert("名前を入力してください");
+        return;
+    }
+    localStorage.setItem('hueHunterPlayerName', nameInput);
+    
     ui.startScreen.style.opacity = '0';
     setTimeout(() => {
         ui.startScreen.style.display = 'none';
@@ -30,7 +78,6 @@ function renderGame() {
     if (state.isGameOver && !state.isPeeking) return;
     ui.board.innerHTML = '';
     
-    // RGBの差が出やすい範囲（S:75-85%, L:45-55%）で色を生成
     const h = Math.floor(Math.random() * 360);
     const s = Math.floor(Math.random() * 10) + 75; 
     const l = Math.floor(Math.random() * 10) + 45; 
@@ -46,12 +93,9 @@ function renderGame() {
     for (let i = 0; i < 25; i++) {
         const block = document.createElement('div');
         block.className = 'block';
-        
-        // だらららっ演出（左上から右下へのディレイ）
         const row = Math.floor(i / 5);
         const col = i % 5;
         block.style.animationDelay = `${(row + col) * 0.05}s`;
-
         block.style.backgroundColor = (i === correctIndex) ? targetColor : baseColor;
         if (i === correctIndex) block.id = "target";
 
@@ -67,7 +111,6 @@ function renderGame() {
 function handleCorrect() {
     state.score++;
     ui.score.innerText = state.score;
-    // 難易度曲線：90点までは指数関数的に難化、100点で1.8度（物理限界）に到達
     if (state.score < 90) {
         state.currentDiff = Math.max(2.0, 15 * Math.pow(0.978, state.score));
     } else {
@@ -85,40 +128,34 @@ function handleIncorrect() {
     target.classList.remove('fade-out');
     target.classList.add('correct-answer');
 
+    // ログイン済み かつ 記録更新時のみ自動保存
+    if (!state.isGuest && state.user && isNewBest) {
+        saveWorldRecord();
+    }
+
     setTimeout(() => showResult(isNewBest), 1000);
 }
 
-// Firebase：オンライン保存
-async function loginAndSave() {
-    if (!window.fb) {
-        alert("Firebaseが初期化されていません。HTMLの設定を確認してください。");
-        return;
-    }
-    const provider = new window.fb.GoogleAuthProvider();
+// --- Online Service ---
+
+async function saveWorldRecord() {
+    if (!state.user) return;
+    const playerName = localStorage.getItem('hueHunterPlayerName') || "Unknown";
     try {
-        const result = await window.fb.signInWithPopup(window.fb.auth, provider);
-        const user = result.user;
-        
-        // Firestoreにスコアを送信
-        await window.fb.addDoc(window.fb.collection(window.fb.db, "rankings"), {
-            name: user.displayName,
+        const docRef = window.fb.doc(window.fb.db, "rankings", state.user.uid);
+        await window.fb.setDoc(docRef, {
+            name: playerName,
             score: state.score,
             timestamp: window.fb.serverTimestamp()
         });
-        
-        document.getElementById('online-save-container').style.display = 'none';
-        loadWorldRanking();
-        alert("世界ランキングに登録しました！");
+        console.log("Ranking updated!");
     } catch (e) {
-        console.error("Firebase Error:", e);
-        alert("登録に失敗しました。コンソールを確認してください。");
+        console.error("Save error", e);
     }
 }
 
-// Firebase：最新ランキング5件を取得
 async function loadWorldRanking() {
     const listEl = document.getElementById('ranking-list');
-    if (!window.fb) return;
     try {
         const q = window.fb.query(
             window.fb.collection(window.fb.db, "rankings"),
@@ -132,13 +169,12 @@ async function loadWorldRanking() {
             const data = doc.data();
             html += `<div style="display:flex; justify-content:space-between; margin-bottom:4px;">
                         <span>${i}. ${data.name}</span>
-                        <span style="color:var(--accent-color);">${data.score}pts</span>
+                        <span style="color:var(--accent-color); font-weight:bold;">${data.score}</span>
                      </div>`;
             i++;
         });
         listEl.innerHTML = html || "No records yet";
     } catch (e) {
-        console.error("Rank Load Error:", e);
         listEl.innerHTML = "Error loading ranking";
     }
 }
@@ -152,22 +188,17 @@ function showResult(isNewBest) {
         state.bestScore = state.score;
         localStorage.setItem('hueHunterBest', state.bestScore);
         document.getElementById('new-record-label').style.display = 'block';
-        createFirework(); // 新記録なら紙吹雪
+        createFirework();
     } else {
         document.getElementById('new-record-label').style.display = 'none';
     }
 
-    // ★ テスト用：1点以上なら登録ボタンを表示
-    if (state.score >= 1) {
-        document.getElementById('online-save-container').style.display = 'block';
-    } else {
-        document.getElementById('online-save-container').style.display = 'none';
-    }
+    // ゲストならログイン勧誘を表示
+    ui.loginNotice.style.display = (!state.user) ? 'block' : 'none';
 
     loadWorldRanking();
 
     ui.resRank.innerText = info.rank;
-    // 100点超えなら黄金エフェクト
     if (state.score >= 100) ui.resRank.classList.add('gold-text');
     else ui.resRank.classList.remove('gold-text');
 
@@ -177,6 +208,8 @@ function showResult(isNewBest) {
     ui.overlay.style.display = 'flex';
     setTimeout(() => ui.overlay.classList.add('visible'), 50);
 }
+
+// --- Others ---
 
 function getRankInfo(diff, score) {
     if (score >= 100) return { rank: "👁️‍🗨️ 神の目", msg: "真理の到達者。1.8度の深淵を見通す、神の領域。" };
