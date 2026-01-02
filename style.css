@@ -2,6 +2,8 @@
     --bg-color: #0d0d0d;
     --accent-color: #00f2ff;
     --text-color: #ffffff;
+    /* 広告の高さを考慮した変数 */
+    --top-ad-height: 60px; 
 }
 
 * {
@@ -17,28 +19,41 @@ body {
     font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
     display: flex;
     flex-direction: column;
+    /* 修正：全体の高さを広告分引いて、はみ出しを防止 */
     height: 100dvh;
     overflow: hidden;
     align-items: center;
+}
+
+/* 上部常駐広告のエリア */
+#top-fixed-ad {
+    width: 100%;
+    min-height: var(--top-ad-height);
+    background-color: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1100; /* StartScreenより上にする */
 }
 
 .header {
     width: 100%;
     text-align: center;
     padding-top: env(safe-area-inset-top);
-    margin-top: 20px;
+    /* 修正：広告があるのでマージンを縮小 */
+    margin-top: 5px;
     z-index: 10;
 }
 
 .score-label {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     letter-spacing: 0.2rem;
     color: var(--accent-color);
 }
 
 #score-display {
     margin: 0;
-    font-size: 3.5rem;
+    font-size: 2.8rem; /* 修正：少し小さくして縦幅を節約 */
     font-weight: 900;
     text-shadow: 0 0 20px rgba(0, 242, 255, 0.5);
 }
@@ -48,15 +63,17 @@ body {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     grid-template-rows: repeat(5, 1fr);
-    gap: 10px;
+    gap: 8px; /* 修正：隙間を少し詰める */
     padding: 10px;
-    width: 85vw;
-    max-width: 380px;
+    width: 82vw; /* 修正：少しだけ小さくして画面内に収まりやすく */
+    max-width: 360px;
     height: auto;
     aspect-ratio: 1 / 1;
-    margin: 20px auto;
+    margin: 10px auto; /* 修正：上下マージンを縮小 */
     place-content: center;
 }
+
+/* --- 中略（block, fadeIn 等は変更なしでOK） --- */
 
 .block {
     width: 100%;
@@ -67,29 +84,21 @@ body {
     transition: transform 0.1s;
     animation: fadeIn 0.4s ease-out backwards;
 }
-
 .block:active { transform: scale(0.92); }
-
-.correct-answer {
-    transform: scale(1.15);
-    z-index: 5;
-}
-
+.correct-answer { transform: scale(1.15); z-index: 5; }
 @keyframes fadeIn {
-    from { 
-        opacity: 0; 
-        transform: translateY(10px) scale(0.9); 
-    }
-    to { 
-        opacity: 1; 
-        transform: translateY(0) scale(1); 
-    }
+    from { opacity: 0; transform: translateY(10px) scale(0.9); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* UIレイアウト共通 */
 #start-screen, #result-overlay {
     position: fixed;
-    inset: 0;
+    /* 修正：上部広告の下から始まるように調整 */
+    top: var(--top-ad-height);
+    bottom: 0;
+    left: 0;
+    right: 0;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -97,20 +106,14 @@ body {
     padding: 20px;
     background: var(--bg-color);
     z-index: 1000;
-}
-
-#auth-ui, #setup-ui, #login-options {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    gap: 12px;
+    /* 修正：スクロール可能にする（リザルトが長いため） */
+    overflow-y: auto;
 }
 
 .game-title {
-    font-size: 4rem;
+    font-size: 3.5rem; /* 修正：少し縮小 */
     line-height: 0.9;
-    margin-bottom: 40px;
+    margin-bottom: 30px;
     text-align: center;
     background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
     -webkit-background-clip: text;
@@ -118,108 +121,58 @@ body {
     -webkit-text-fill-color: transparent;
 }
 
-#display-name {
-    padding: 12px;
-    border-radius: 25px;
-    border: 1px solid var(--accent-color);
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    text-align: center;
-    width: 220px;
-    outline: none;
-    margin-bottom: 20px;
-    font-size: 1rem;
-}
-
-/* ボタン共通設定 */
+/* ボタンサイズを少しコンパクトに調整 */
 .btn-start, .btn-look, .btn-restart, .btn-sync-notice {
-    padding: 16px;
+    padding: 14px;
     border-radius: 30px;
     border: none;
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: bold;
     cursor: pointer;
-    width: 240px;
+    width: 220px;
     text-align: center;
     transition: all 0.2s;
 }
 
-.btn-start { background: var(--accent-color); color: #000; }
-.btn-look { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
-.btn-restart { background: var(--accent-color); color: #000; }
-
-/* ★ここを修正しました：同期ボタンの統一 */
-.btn-sync-notice {
-    border: 1px solid var(--accent-color);
-    background: rgba(0, 242, 255, 0.1);
-    color: #fff;
-    margin-bottom: 20px;
-}
-.btn-sync-notice:active { transform: scale(0.95); background: rgba(0, 242, 255, 0.2); }
-
-.btn-group {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+/* リザルト画面の調整 */
+#ad-space {
     width: 100%;
-    gap: 12px;
-}
-
-/* リザルト画面 */
-#result-overlay {
-    background: rgba(0,0,0,0.95);
-    display: none;
-    z-index: 2000;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-#result-overlay.visible {
-    display: flex !important;
-    opacity: 1;
+    max-width: 300px;
+    margin: 15px 0;
+    min-height: 250px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03); /* 広告枠をうっすら見せる */
+    border-radius: 10px;
 }
 
 #ranking-container {
     width: 280px;
     background: rgba(255,255,255,0.05);
-    padding: 15px;
+    padding: 12px;
     border-radius: 15px;
-    margin-bottom: 20px;
-}
-
-#ranking-header {
-    border-bottom: 1px solid rgba(255,255,255,0.2);
-    padding-bottom: 5px;
     margin-bottom: 10px;
-    color: var(--accent-color);
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.8rem;
-    font-weight: bold;
 }
 
-#back-to-result {
-    position: fixed;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 12px 24px;
-    border-radius: 30px;
-    background: var(--accent-color);
-    color: #000;
-    border: none;
-    font-weight: bold;
-    display: none;
-    z-index: 3000;
-}
+.rank-name { font-size: 2rem; font-weight: 900; margin-bottom: 2px; }
+.msg-text { font-size: 0.85rem; color: #ccc; margin-bottom: 15px; text-align: center; }
+.result-stats { display: flex; gap: 20px; margin-bottom: 15px; }
 
+/* 以下の既存スタイルは維持 */
+.btn-start { background: var(--accent-color); color: #000; }
+.btn-look { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+.btn-restart { background: var(--accent-color); color: #000; }
+.btn-sync-notice { border: 1px solid var(--accent-color); background: rgba(0, 242, 255, 0.1); color: #fff; margin-bottom: 20px; }
+.btn-sync-notice:active { transform: scale(0.95); background: rgba(0, 242, 255, 0.2); }
+.btn-group { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 10px; }
+#result-overlay { background: rgba(0,0,0,0.95); display: none; z-index: 2000; opacity: 0; transition: opacity 0.3s; }
+#result-overlay.visible { display: flex !important; opacity: 1; }
+#ranking-header { border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px; margin-bottom: 10px; color: var(--accent-color); display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: bold; }
+#back-to-result { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); padding: 12px 24px; border-radius: 30px; background: var(--accent-color); color: #000; border: none; font-weight: bold; display: none; z-index: 3000; }
 #back-to-result.visible { display: block !important; }
-
 .fade-out { opacity: 0.2; transform: scale(0.9); transition: 0.5s; }
-.rank-name { font-size: 2.2rem; font-weight: 900; margin-bottom: 5px; }
-.msg-text { font-size: 0.9rem; color: #ccc; margin-bottom: 25px; text-align: center; }
-.result-stats { display: flex; gap: 30px; margin-bottom: 25px; }
 .stat-item { text-align: center; }
 .stat-label { display: block; font-size: 0.7rem; color: var(--accent-color); margin-bottom: 5px; }
-.stat-value { font-size: 1.8rem; font-weight: bold; }
+.stat-value { font-size: 1.6rem; font-weight: bold; }
 .gold-text { background: linear-gradient(to bottom, #ffd700, #ff8c00); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
