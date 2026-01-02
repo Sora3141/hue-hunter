@@ -1,5 +1,5 @@
-const STORAGE_KEY = 'hueHunter_v6_best';
-const NAME_KEY = 'hueHunter_v6_name';
+const STORAGE_KEY = 'hueHunter_v1.0.1_best';
+const NAME_KEY = 'hueHunter_v1.0.1_name';
 
 const state = {
     score: 0,
@@ -11,7 +11,7 @@ const state = {
     isGuest: false
 };
 
-// --- Auth (Redirect & Stabilized) ---
+// --- Auth (Persistence & Redirect) ---
 
 async function login() {
     if (!window.fb) return;
@@ -24,9 +24,15 @@ async function login() {
             loginBtn.innerText = "ログイン中...";
             loginBtn.disabled = true;
         }
+
+        // ★重要: ログイン情報を「ローカルストレージ」に強制保存する設定
+        await window.fb.setPersistence(window.fb.auth, window.fb.browserLocalPersistence);
+        
+        // その後リダイレクト
         await window.fb.signInWithRedirect(window.fb.auth, provider);
     } catch (e) { 
         console.error("Login initiation failed", e);
+        alert("ログインエラー: " + e.message); // エラーが見えるようにアラートを出す
         resetLoginBtn();
     }
 }
@@ -40,15 +46,14 @@ function resetLoginBtn() {
 }
 
 function handleLoginSuccess(user) {
-    if (state.user) return; // 二重実行防止
+    if (state.user) return;
     state.user = user;
     state.isGuest = false;
     
-    // UI切り替え
     const loginOptions = document.getElementById('login-options');
     const setupUi = document.getElementById('setup-ui');
     if (loginOptions) loginOptions.style.display = 'none';
-    if (setupUi) setupUi.style.display = 'flex'; // ここにランキングボタンも含まれる
+    if (setupUi) setupUi.style.display = 'flex';
     
     const welcomeMsg = document.getElementById('welcome-msg');
     if (welcomeMsg) welcomeMsg.innerText = `Hello, ${user.displayName}`;
@@ -176,7 +181,6 @@ async function loadWorldRanking() {
         }
         
         const finalHtml = html || "No records";
-        // 全箇所のリストを更新
         if (document.getElementById('ranking-list')) document.getElementById('ranking-list').innerHTML = finalHtml;
         if (document.getElementById('start-ranking-list')) document.getElementById('start-ranking-list').innerHTML = finalHtml;
         if (document.getElementById('setup-ranking-list')) document.getElementById('setup-ranking-list').innerHTML = finalHtml;
@@ -292,16 +296,18 @@ function initRanking() {
         const loginBtn = document.getElementById('btn-google-login');
         if (loginBtn) loginBtn.innerText = "認証情報を確認中...";
 
-        // 状態監視
+        // 監視ロジック
         window.fb.onAuthStateChanged(window.fb.auth, (user) => {
             if (user) {
                 handleLoginSuccess(user);
             } else {
-                setTimeout(() => { if (!window.fb.auth.currentUser) resetLoginBtn(); }, 2000);
+                // 3秒待ってもダメならボタンを復活
+                setTimeout(() => { 
+                    if (!window.fb.auth.currentUser) resetLoginBtn(); 
+                }, 3000);
             }
         });
 
-        // リダイレクト結果キャッチ
         window.fb.getRedirectResult(window.fb.auth).then((result) => {
             if (result && result.user) handleLoginSuccess(result.user);
         }).catch((e) => console.log("Redir handled:", e.message));

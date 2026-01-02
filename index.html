@@ -89,12 +89,23 @@
             </div>
         </div>
 
-        <div id="version-display">v1.0.1</div>
+        <div id="version-display">v1.0.2</div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        // ★ setPersistence と browserLocalPersistence を追加
+        import { 
+            getAuth, 
+            GoogleAuthProvider, 
+            signInWithPopup, 
+            signInWithRedirect, 
+            getRedirectResult, 
+            onAuthStateChanged,
+            setPersistence,            
+            browserLocalPersistence    
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        
         import { getFirestore, collection, doc, setDoc, getDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -110,9 +121,11 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         
+        // ★ window.fb に新しい機能も登録
         window.fb = { 
             auth, db, GoogleAuthProvider, signInWithPopup, 
             signInWithRedirect, getRedirectResult, onAuthStateChanged,
+            setPersistence, browserLocalPersistence, 
             collection, doc, setDoc, getDoc, query, orderBy, limit, getDocs, serverTimestamp 
         };
     </script>
