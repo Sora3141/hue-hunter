@@ -271,3 +271,14 @@ body {
 .rank-num { width: 40px; }
 .rank-name { flex: 1; text-align: left; padding-left: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank-score { width: 60px; text-align: right; }
+
+#version-label {
+    position: fixed;      /* 画面に対して位置を固定 */
+    bottom: 8px;          /* 下から8pxの位置 */
+    right: 8px;           /* 右から8pxの位置 */
+    font-size: 0.65rem;   /* かなり小さめに設定 */
+    color: rgba(255, 255, 255, 0.3); /* 白を30%だけ透過（控えめな色） */
+    pointer-events: none; /* クリックを無効化（下のボタンの邪魔をしない） */
+    z-index: 10000;       /* 広告やモーダルよりも手前に表示 */
+    font-family: monospace; /* バージョン表記っぽく等幅フォントに */
+}
