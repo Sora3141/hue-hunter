@@ -7,13 +7,13 @@
 * {
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
-    /* Chromeでのスクロール時のバウンスや意図しない挙動を抑制 */
     overscroll-behavior: none;
 }
 
 body {
     margin: 0;
     padding: 0;
+    padding-top: calc(50px + env(safe-area-inset-top)); 
     background-color: var(--bg-color);
     color: var(--text-color);
     font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
@@ -24,12 +24,41 @@ body {
     align-items: center;
 }
 
-/* ヘッダー */
+/* --- 広告エリア --- */
+#ad-top-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--bg-color);
+    z-index: 9999;
+    padding-top: env(safe-area-inset-top);
+    box-sizing: content-box;
+    border-bottom: 1px solid rgba(255,255,255,0.1); /* 境界線を追加して分かりやすく */
+}
+
+#ad-result-container {
+    width: 300px;
+    height: 250px;
+    margin: 20px auto; /* 上下の余白を確保 */
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2005; /* ランクより後ろ、背景より前 */
+}
+
+/* --- メインコンテンツ --- */
 .header {
     width: 100%;
     text-align: center;
-    padding-top: env(safe-area-inset-top);
-    margin-top: 20px;
+    margin-top: 10px;
     z-index: 10;
 }
 
@@ -46,7 +75,6 @@ body {
     text-shadow: 0 0 20px rgba(0, 242, 255, 0.5);
 }
 
-/* ゲーム盤面 */
 #game-board {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -57,9 +85,8 @@ body {
     max-width: 380px;
     height: auto;
     aspect-ratio: 1 / 1;
-    margin: 20px auto;
+    margin: 10px auto;
     place-content: center;
-    /* 盤面が他のUIの背面に隠れないように設定 */
     position: relative;
     z-index: 5;
 }
@@ -72,7 +99,6 @@ body {
     cursor: pointer;
     transition: transform 0.1s;
     animation: fadeIn 0.4s ease-out backwards;
-    /* スマホChromeでのタップ反応を向上 */
     pointer-events: auto;
 }
 
@@ -88,18 +114,20 @@ body {
     to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* UIレイアウト共通（スタート画面・リザルト） */
+/* --- オーバーレイ調整 --- */
 #start-screen, #result-overlay {
     position: fixed;
     inset: 0;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     padding: 20px;
+    /* ★修正点：上部余白を大きく増やして、固定広告の下から表示されるようにする */
+    padding-top: calc(80px + env(safe-area-inset-top)); 
     background: var(--bg-color);
-    /* 盤面より必ず前に出す */
     z-index: 1000;
+    overflow-y: auto;
 }
 
 #auth-ui, #setup-ui, #login-options {
@@ -115,12 +143,13 @@ body {
 .game-title {
     font-size: 4rem;
     line-height: 0.9;
-    margin-bottom: 40px;
+    margin-bottom: 30px;
     text-align: center;
     background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
+    flex-shrink: 0;
 }
 
 #display-name {
@@ -136,7 +165,7 @@ body {
     font-size: 1rem;
 }
 
-/* ボタン共通設定 */
+/* ボタン */
 .btn-start, .btn-look, .btn-restart, .btn-sync-notice {
     padding: 16px;
     border-radius: 30px;
@@ -147,10 +176,10 @@ body {
     width: 240px;
     text-align: center;
     transition: all 0.2s;
-    /* Chromeで他の要素にクリックを吸われないように設定 */
     position: relative;
     z-index: 1100;
     pointer-events: auto !important;
+    flex-shrink: 0;
 }
 
 .btn-start { background: var(--accent-color); color: #000; }
@@ -171,9 +200,11 @@ body {
     align-items: center;
     width: 100%;
     gap: 12px;
+    margin-top: 10px;
+    flex-shrink: 0;
 }
 
-/* リザルト画面専用 */
+/* リザルト画面 */
 #result-overlay {
     background: rgba(0,0,0,0.95);
     display: none;
@@ -189,9 +220,10 @@ body {
     background: rgba(255,255,255,0.05);
     padding: 15px;
     border-radius: 15px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     position: relative;
     z-index: 2010;
+    flex-shrink: 0;
 }
 
 #ranking-header {
@@ -205,7 +237,6 @@ body {
     font-weight: bold;
 }
 
-/* 結果を見るボタン（浮遊） */
 #back-to-result {
     position: fixed;
     bottom: 40px;
@@ -223,22 +254,33 @@ body {
 }
 #back-to-result.visible { display: block !important; }
 
+/* ★修正点：ランク表示を強化 */
+.rank-name {
+    font-size: 2.2rem;
+    font-weight: 900;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+    /* 以下を追加して確実に表示させる */
+    position: relative;
+    z-index: 2020; /* 広告より手前に */
+    color: #fff;
+    text-shadow: 0 0 10px rgba(0,0,0,0.8); /* 背景が黒でも浮き出るように */
+    display: block;
+}
+
 .fade-out { opacity: 0.2; transform: scale(0.9); transition: 0.5s; }
-.rank-name { font-size: 2.2rem; font-weight: 900; margin-bottom: 5px; }
-.msg-text { font-size: 0.9rem; color: #ccc; margin-bottom: 25px; text-align: center; }
-.result-stats { display: flex; gap: 30px; margin-bottom: 25px; }
+.msg-text { font-size: 0.9rem; color: #ccc; margin-bottom: 15px; text-align: center; flex-shrink: 0;}
+.result-stats { display: flex; gap: 30px; margin-bottom: 15px; flex-shrink: 0; }
 .stat-item { text-align: center; }
 .stat-label { display: block; font-size: 0.7rem; color: var(--accent-color); margin-bottom: 5px; }
 .stat-value { font-size: 1.8rem; font-weight: bold; }
 .gold-text { background: linear-gradient(to bottom, #ffd700, #ff8c00); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 
-/* もっと見る（リンク型） */
 .link-button {
     font-size: 0.8rem; color: #888; text-decoration: underline; cursor: pointer; padding: 10px; display: inline-block;
     pointer-events: auto;
 }
 
-/* 全ランキング用モーダル（最前面） */
 #full-ranking-modal {
     position: fixed; inset: 0; background: var(--bg-color); z-index: 4000;
     display: none; flex-direction: column; padding: 20px;
@@ -259,7 +301,6 @@ body {
 #full-ranking-list {
     flex: 1; overflow-y: auto; width: 100%; max-width: 500px;
     margin: 0 auto; padding-bottom: 50px;
-    /* スムーズなスクロール */
     -webkit-overflow-scrolling: touch;
 }
 
@@ -269,16 +310,22 @@ body {
 }
 .ranking-row.me { color: var(--accent-color); font-weight: bold; background: rgba(0, 242, 255, 0.05); }
 .rank-num { width: 40px; }
-.rank-name { flex: 1; text-align: left; padding-left: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-name-row { flex: 1; text-align: left; padding-left: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank-score { width: 60px; text-align: right; }
 
-#version-label {
-    position: fixed;      /* 画面に対して位置を固定 */
-    bottom: 8px;          /* 下から8pxの位置 */
-    right: 8px;           /* 右から8pxの位置 */
-    font-size: 0.65rem;   /* かなり小さめに設定 */
-    color: rgba(255, 255, 255, 0.3); /* 白を30%だけ透過（控えめな色） */
-    pointer-events: none; /* クリックを無効化（下のボタンの邪魔をしない） */
-    z-index: 10000;       /* 広告やモーダルよりも手前に表示 */
-    font-family: monospace; /* バージョン表記っぽく等幅フォントに */
+/* 右下のバージョン表記 */
+.version-info {
+    position: fixed;
+    bottom: 5px;
+    right: 5px;
+    /* iPhoneなどの角丸・ホームバーを避ける */
+    margin-bottom: env(safe-area-inset-bottom);
+    margin-right: env(safe-area-inset-right);
+    
+    font-size: 0.6rem;       /* 小さく */
+    color: rgba(255, 255, 255, 0.3); /* 薄く透明に */
+    z-index: 9999;           /* 最前面 */
+    pointer-events: none;    /* クリックを邪魔しない */
+    font-family: sans-serif;
+    user-select: none;       /* テキスト選択不可 */
 }

@@ -5,29 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Hue Hunter | Cloud Sync</title>
     <link rel="stylesheet" href="style.css">
-    <style>
-        /* 広告用の簡易スタイル追加 */
-        #top-fixed-ad {
-            width: 100%;
-            text-align: center;
-            background: #000; /* 背景色に合わせて調整してください */
-            z-index: 1000;
-            padding: 5px 0;
-        }
-        #ad-space {
-            margin: 10px 0;
-            text-align: center;
-            width: 100%;
-            display: flex;
-            justify-content: center;
-        }
-    </style>
 </head>
 <body>
 
-    <div id="top-fixed-ad">
-        <script src="https://adm.shinobi.jp/s/3be4a74111b0e4660a4445b3864b1a35"></script>
+    <div id="ad-top-container">
+        <script src="https://adm.shinobi.jp/s/fbe3608133af14816ff830129b4da30b"></script>
         </div>
+
     <div class="header">
         <div class="score-label">SCORE</div>
         <h1 id="score-display">0</h1>
@@ -37,6 +21,7 @@
     <button id="back-to-result" onclick="showResult(false)">結果に戻る</button>
 
     <div id="start-screen">
+        <div style="height: 40px;"></div>
         <h1 class="game-title">HUE<br>HUNTER</h1>
         <div id="auth-ui">
             <div id="login-options">
@@ -59,6 +44,11 @@
     <div id="result-overlay">
         <div id="new-record-label" style="display:none;">★ NEW RECORD ★</div>
         <div id="res-rank" class="rank-name">---</div>
+
+        <div id="ad-result-container">
+            <script src="https://adm.shinobi.jp/s/3be4a74111b0e4660a4445b3864b1a35"></script>
+            </div>
+
         <div id="res-msg" class="msg-text">---</div>
 
         <div id="ranking-container">
@@ -73,9 +63,6 @@
             </div>
         </div>
 
-        <div id="ad-space">
-            <script src="https://adm.shinobi.jp/s/fbe3608133af14816ff830129b4da30b"></script>
-            </div>
         <div id="guest-login-notice" style="display:none;">
             <button onclick="login()" class="btn-sync-notice">Googleログインして同期を有効化</button>
         </div>
@@ -95,6 +82,8 @@
             <button class="btn-restart" onclick="resetGame()">もう一度挑戦</button>
             <button class="btn-look" onclick="peekBoard()">盤面を確認する</button>
         </div>
+
+        <div style="height: 60px; flex-shrink: 0;"></div>
     </div>
 
     <div id="full-ranking-modal">
@@ -136,7 +125,7 @@
             }
         });
     </script>
+    <div class="version-info">ver 1.0.0</div>
     <script src="script.js"></script>
-    <div id="version-label">v1.0.2</div> <script src="script.js"></script>
 </body>
 </html>
