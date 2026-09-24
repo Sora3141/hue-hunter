@@ -46,6 +46,19 @@ python3 -m http.server 8000
 
 Google ログインは `localhost` を Firebase Authentication の承認済みドメインに追加しておくこと。
 
+### Firestore のルールを公開する
+
+`firestore.rules` を変えたら、Firebase に公開しないと本番には効かない（公開し忘れると `rankings_v2` の読み書きが `permission-denied` になる）。
+
+```sh
+npx firebase-tools login                              # 最初の 1 回
+npx firebase-tools deploy --only firestore:rules      # firebase.json / .firebaserc の設定で huehunterworld に公開
+```
+
+Firebase コンソール > Firestore Database > ルール に `firestore.rules` を貼って「公開」してもよい。
+Google ログインを使うので、Authentication > 設定 > 承認済みドメイン に `sora3141.github.io` と `localhost` を入れておく。
+
+
 ビルドやテストの手順はない（静的ファイルをそのまま配信する）。Firestore の設定は下の「Firestore」を参照。
 
 > `color-test` リポジトリは本ゲームのローカル版（"Ultimate"）です。
