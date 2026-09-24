@@ -10,7 +10,7 @@
 
 // キャッシュ名はアプリ名で始める（同じオリジンの他アプリのキャッシュと区別するため）
 const PREFIX = 'hue-hunter-';
-const VERSION = PREFIX + '2.5.1';
+const VERSION = PREFIX + '2.5.2'; // index.html の #version と揃える
 const LEGACY = /^hh-\d/; // 以前このアプリが使っていたキャッシュ名（hh-2.5.0 など）
 const SHELL = [
     './',
@@ -21,6 +21,7 @@ const SHELL = [
     './icons/icon-192.png',
     './icons/icon-512.png',
     './icons/icon.svg',
+    './icons/favicon-32.png',
     './icons/apple-touch-icon.png'
 ];
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];

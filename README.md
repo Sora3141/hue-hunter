@@ -9,7 +9,9 @@ Firebase によるログインとランキング同期に対応しています�
 - デモ: https://sora3141.github.io/hue-hunter/
 - 制作: [T.OF...](https://sora3141.github.io/)
 
-## テストの内容（Season 2 / Time Attack）
+## 遊び方
+
+Season 2 / Time Attack。
 
 - 持ち時間 12 秒から開始。1枚だけ色相の違うタイルを選ぶ。
 - 正解すると**残り時間が回復**する（回復量は 3.0 秒から 1.4 秒へ逓減）。
@@ -17,6 +19,36 @@ Firebase によるログインとランキング同期に対応しています�
 - スコアに応じてグリッドが **2×2 から 10×10 まで 9 段階**で細かくなる（3 / 7 / 12 / 18 / 26 / 36 / 48 / 62 点）。
 - 色相差は **18° から 1.2° へ逓減**。**誤答**または**時間切れ**で終了。
 - 終了時に、その回で**識別できた最小の色差**が記録される。これがテストの測定結果にあたる。
+- 操作はタップ（クリック）だけ。縦画面のスマホで最後まで遊べる。
+- 一時停止は HUD 右上のボタン、PC では P / Esc キーでも可。
+- ログインせずにゲストで計測でき、記録は端末内に保存される。ランキングに載せるときだけ Google ログイン（Firebase）を使う。
+
+## アプリとして入れる（PWA）
+
+| ブラウザ | 方法 |
+|---|---|
+| Chrome / Edge（Android・PC） | タイトル画面の「アプリとして追加」、またはアドレスバーのインストールアイコン |
+| Safari（iPhone / iPad） | 共有 → ホーム画面に追加（タイトルの「アプリとして追加」で手順を表示） |
+| Safari（Mac） | 共有 または ファイル → Dock に追加 |
+
+- `manifest.webmanifest` と `icons/`（アイコンは色相の虹彩。`icons/icon.svg` が原本）。
+- `sw.js` は自前ファイルを **network-first** で扱うので、デプロイした更新は次回起動時にそのまま反映される。
+  圏外でもキャッシュから起動してゲストで計測できる（ログインとランキングはオンライン時のみ）。
+  Firebase のリクエストには触らない。
+- インストールには HTTPS が必要（GitHub Pages はそのまま満たす。ローカルは `localhost` で可）。
+
+## 開発
+
+```sh
+python3 -m http.server 8000
+# http://localhost:8000 を開く
+```
+
+Google ログインは `localhost` を Firebase Authentication の承認済みドメインに追加しておくこと。
+
+ビルドやテストの手順はない（静的ファイルをそのまま配信する）。Firestore の設定は下の「Firestore」を参照。
+
+> `color-test` リポジトリは本ゲームのローカル版（"Ultimate"）です。
 
 ## UI 設計の方針
 
@@ -90,20 +122,6 @@ Firebase によるログインとランキング同期に対応しています�
 - リンクのプレビュー用に OGP / Twitter Card を設定済み（`icons/og.png`、1200×630）。
 - シェア先 URL は `SHARE_URL`（script.js）に固定している。ドメインを変えたらここと index.html の `og:*` を直す。
 
-## アプリとしてインストール（PWA）
-
-| ブラウザ | 方法 |
-|---|---|
-| Chrome / Edge（Android・PC） | タイトル画面の「アプリとして追加」、またはアドレスバーのインストールアイコン |
-| Safari（iPhone / iPad） | 共有 → ホーム画面に追加（タイトルの「アプリとして追加」で手順を表示） |
-| Safari（Mac） | 共有 または ファイル → Dock に追加 |
-
-- `manifest.webmanifest` と `icons/`（アイコンは色相の虹彩。`icons/icon.svg` が原本）。
-- `sw.js` は自前ファイルを **network-first** で扱うので、デプロイした更新は次回起動時にそのまま反映される。
-  圏外でもキャッシュから起動してゲストで計測できる（ログインとランキングはオンライン時のみ）。
-  Firebase のリクエストには触らない。
-- インストールには HTTPS が必要（GitHub Pages はそのまま満たす。ローカルは `localhost` で可）。
-
 ## 使用技術
 
 - HTML / CSS / Vanilla JavaScript（ビルド不要・GitHub Pages で直接配信）
@@ -118,14 +136,3 @@ Firebase によるログインとランキング同期に対応しています�
 
 セキュリティルールは [firestore.rules](firestore.rules) を Firebase コンソールに貼り付けて公開する。
 **未設定だと `rankings_v2` への書き込みが `permission-denied` で失敗する。**
-
-## ローカルで動かす
-
-```sh
-python3 -m http.server 8000
-# http://localhost:8000 を開く
-```
-
-Google ログインは `localhost` を Firebase Authentication の承認済みドメインに追加しておくこと。
-
-> `color-test` リポジトリは本ゲームのローカル版（"Ultimate"）です。

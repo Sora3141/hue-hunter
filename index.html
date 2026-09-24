@@ -2,12 +2,12 @@
 <html lang="ja" data-surround="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#0a0a0a" id="meta-theme-color">
     <meta name="description" content="1つだけ色相の違うマスを探す色彩識別テスト。あなたが見分けられる最小の色差を測定します。">
-    <title>Hue Hunter | 色彩識別テスト</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0a0a'/%3E%3Crect x='6' y='6' width='9' height='9' rx='2' fill='%23f2f2f2'/%3E%3Crect x='17' y='6' width='9' height='9' rx='2' fill='%23f2f2f2'/%3E%3Crect x='6' y='17' width='9' height='9' rx='2' fill='%23f2f2f2'/%3E%3Crect x='17.5' y='17.5' width='8' height='8' rx='2' fill='none' stroke='%23f2f2f2' stroke-width='1.4'/%3E%3C/svg%3E">
+    <title>Hue Hunter — 色相識別テスト</title>
     <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Hue Hunter">
     <meta property="og:url" content="https://sora3141.github.io/hue-hunter/">
     <meta property="og:title" content="Hue Hunter — 色相識別テスト">
     <meta property="og:description" content="1枚だけ色相の違うマスを探す色彩識別テスト。あなたの目はどこまで見分けられる？">
@@ -16,15 +16,17 @@
     <meta property="og:image:height" content="630">
     <meta property="og:locale" content="ja_JP">
     <meta name="twitter:card" content="summary_large_image">
-    <link rel="manifest" href="manifest.webmanifest">
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+    <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Hue Hunter">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="./style.css">
 </head>
 <body>
 
@@ -181,7 +183,7 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M12 7.5v7m-3-3 3 3 3-3M10 18.5h4"/></svg>
                 <span><b>アプリとして追加</b><small>ホーム画面から全画面で計測できます</small></span>
             </button>
-            <p id="version">2.5.0</p>
+            <p id="version">2.5.2</p>
             <p class="credit"><a href="/">T.OF...</a> のアプリ</p>
         </div>
     </section>
@@ -270,7 +272,7 @@
         <div class="sheet sheet-bottom" role="dialog" aria-label="アプリとして追加">
             <div class="sheet-grab" aria-hidden="true"></div>
             <div class="install-head">
-                <img src="icons/icon-192.png" alt="" width="52" height="52">
+                <img src="./icons/icon-192.png" alt="" width="52" height="52">
                 <div>
                     <p class="install-title">Hue Hunter をアプリとして追加</p>
                     <p class="fine install-sub">ホーム画面から、ブラウザの枠なしで起動できます</p>
@@ -369,6 +371,6 @@
             if (typeof window.onAuthReady === 'function') window.onAuthReady(user);
         });
     </script>
-    <script src="script.js" defer></script>
+    <script src="./script.js" defer></script>
 </body>
 </html>

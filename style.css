@@ -78,6 +78,10 @@
 
 [hidden] { display: none !important; }
 
+/* 拡大を禁止しない代わりに、操作する場所ではダブルタップ拡大と長押し選択だけ止める */
+#app, button { touch-action: manipulation; }
+#app { -webkit-user-select: none; user-select: none; }
+
 html, body { height: 100%; }
 
 /* Safari 26 は上下バーの色を html から取るので、body と同じ色を html にも塗る */
@@ -489,11 +493,15 @@ body:not([data-mode="play"]) #btn-pause { visibility: hidden; }
     z-index: 800;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    /* 隠すときは display: none まで落とす（opacity: 0 のままだと Safari 26 が上下バーの色を拾う）。
+       allow-discrete で display の切り替えをフェードの終わりまで遅らせ、
+       出すときは @starting-style の透明から始める。非対応ブラウザではフェードなしで切り替わる。 */
+    display: none;
     opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s var(--ease), visibility 0.3s;
+    transition: opacity 0.3s var(--ease), display 0.3s allow-discrete;
 }
-.screen.on { opacity: 1; visibility: visible; }
+.screen.on { display: block; opacity: 1; }
+@starting-style { .screen.on { opacity: 0; } }
 
 .screen-inner {
     min-height: 100%;
@@ -734,6 +742,7 @@ body:not([data-mode="play"]) #btn-pause { visibility: hidden; }
     transition: transform 0.3s var(--ease-out);
 }
 #install-sheet.on .sheet { transform: translateY(0); }
+@starting-style { #install-sheet.on .sheet { transform: translateY(16px); } }
 .install-head { display: flex; align-items: center; gap: 14px; }
 .install-head img { border-radius: 12px; flex-shrink: 0; }
 .install-title { margin: 0; font-weight: 700; font-size: 0.95rem; }
@@ -965,6 +974,7 @@ body:not([data-mode="play"]) #btn-pause { visibility: hidden; }
     overflow-y: auto;
 }
 #share-sheet.on .sheet { transform: translateY(0); }
+@starting-style { #share-sheet.on .sheet { transform: translateY(16px); } }
 .share .setting-key { text-align: center; }
 
 .share-card {
@@ -1115,12 +1125,12 @@ body:not([data-mode="play"]) #btn-pause { visibility: hidden; }
 .screen-sheet {
     z-index: 860;
     transform: translateY(14px);
-    transition: opacity 0.3s var(--ease), visibility 0.3s, transform 0.3s var(--ease);
+    transition: opacity 0.3s var(--ease), transform 0.3s var(--ease), display 0.3s allow-discrete;
     padding: calc(22px + env(safe-area-inset-top)) 22px 0;
-    display: flex;
     flex-direction: column;
 }
-.screen-sheet.on { transform: translateY(0); }
+.screen-sheet.on { display: flex; transform: translateY(0); }
+@starting-style { .screen-sheet.on { transform: translateY(14px); } }
 
 .lb-head {
     display: flex;
@@ -1185,17 +1195,17 @@ body:not([data-mode="play"]) #btn-pause { visibility: hidden; }
     position: fixed;
     inset: 0;
     z-index: 880;
-    display: flex;
+    display: none;   /* 隠し方は .screen と同じ（display: none までフェード） */
     align-items: center;
     justify-content: center;
     background: var(--veil);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.22s var(--ease), visibility 0.22s;
+    transition: opacity 0.22s var(--ease), display 0.22s allow-discrete;
 }
-.veil.on { opacity: 1; visibility: visible; }
+.veil.on { display: flex; opacity: 1; }
+@starting-style { .veil.on { opacity: 0; } }
 
 /* 一時停止中は盤面を完全に伏せる（止めて探す抜け道を塞ぐ） */
 #pause { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
@@ -1265,6 +1275,7 @@ body:not([data-mode="play"]) #btn-pause { visibility: hidden; }
     transition: transform 0.3s var(--ease-out);
 }
 #settings.on .sheet { transform: translateY(0); }
+@starting-style { #settings.on .sheet { transform: translateY(16px); } }
 
 .setting { display: flex; flex-direction: column; gap: 10px; }
 .setting-key {

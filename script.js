@@ -55,11 +55,22 @@ function sensitivityAt(h) {
 
 const SURROUND_BG = { dark: '#0a0a0a', gray: '#767676', light: '#ededed' };
 
+// localStorage はプライベートモードや容量超過で例外を出すことがある。
+// 読み書きはすべてここを通し、保存できなくても計測は続けられるようにする。
+const store = {
+    get(key) {
+        try { return localStorage.getItem(key); } catch (e) { return null; }
+    },
+    set(key, value) {
+        try { localStorage.setItem(key, value); } catch (e) { /* 保存できない環境は無視 */ }
+    }
+};
+
 // --- 状態 ---------------------------------------------------
 
 const state = {
     score: 0,
-    best: parseInt(localStorage.getItem(K_BEST), 10) || 0,
+    best: parseInt(store.get(K_BEST), 10) || 0,
     n: 2,
     maxN: 2,
     answer: -1,
@@ -84,8 +95,8 @@ const state = {
     guest: false,
     loggingIn: false,
 
-    sound: localStorage.getItem(K_SOUND) !== 'off',
-    surround: localStorage.getItem(K_SURROUND) || 'dark'
+    sound: store.get(K_SOUND) !== 'off',
+    surround: store.get(K_SURROUND) || 'dark'
 };
 
 const $ = (id) => document.getElementById(id);
@@ -150,13 +161,13 @@ function applySurround(name) {
     state.surround = SURROUND_BG[name] ? name : 'dark';
     document.documentElement.setAttribute('data-surround', state.surround);
     $('meta-theme-color').setAttribute('content', SURROUND_BG[state.surround]);
-    localStorage.setItem(K_SURROUND, state.surround);
+    store.set(K_SURROUND, state.surround);
     syncSegments();
 }
 
 function applySound(on) {
     state.sound = on;
-    localStorage.setItem(K_SOUND, on ? 'on' : 'off');
+    store.set(K_SOUND, on ? 'on' : 'off');
     syncSegments();
 }
 
@@ -234,9 +245,9 @@ async function syncCloud() {
         const d = snap.data();
         if (typeof d.score === 'number' && d.score > state.best) {
             state.best = d.score;
-            localStorage.setItem(K_BEST, String(state.best));
+            store.set(K_BEST, String(state.best));
         }
-        if (d.name) localStorage.setItem(K_NAME, d.name);
+        if (d.name) store.set(K_NAME, d.name);
     } catch (e) {
         console.error('sync failed', e);
     }
@@ -244,7 +255,7 @@ async function syncCloud() {
 
 async function saveRecord() {
     if (!state.user) return;
-    const name = (localStorage.getItem(K_NAME) || 'Unknown').slice(0, NAME_MAX);
+    const name = (store.get(K_NAME) || 'Unknown').slice(0, NAME_MAX);
     try {
         await window.fb.setDoc(window.fb.doc(window.fb.db, COLLECTION, state.user.uid), {
             name,
@@ -276,7 +287,7 @@ function openSetup(who) {
     setHidden($('pane-setup'), false);
     $('welcome').textContent = who;
     setHidden($('btn-signout'), state.guest || !state.user);
-    const saved = localStorage.getItem(K_NAME);
+    const saved = store.get(K_NAME);
     if (saved) $('name-input').value = saved;
 }
 
@@ -294,7 +305,7 @@ function beginFromTitle() {
         return;
     }
     setHidden(err, true);
-    localStorage.setItem(K_NAME, name);
+    store.set(K_NAME, name);
 
     showLayer(el.title, false);
     setTimeout(startRound, 320);
@@ -488,7 +499,7 @@ function finish(cause) {
     const isBest = state.score > state.best;
     if (isBest) {
         state.best = state.score;
-        localStorage.setItem(K_BEST, String(state.best));
+        store.set(K_BEST, String(state.best));
         paintBest();
         if (!state.guest && state.user) saveRecord();
     }
@@ -1214,7 +1225,7 @@ window.addEventListener('appinstalled', () => { deferredInstall = null; paintIns
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch((e) => console.error('sw failed', e));
+        navigator.serviceWorker.register('./sw.js').catch((e) => console.error('sw failed', e));
     });
 }
 
