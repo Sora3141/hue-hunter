@@ -125,9 +125,18 @@ const setHidden = (node, hidden) => { if (node) node.hidden = hidden; };
 
 let ac = null;
 
+// iPhone のマナーモードでも鳴らす（Safari 16.4 以降）。
+// 'playback' にすると音楽アプリの曲が止まるので、サウンドがオンのときだけにする。
+function setAudioSession(soundOn) {
+    try {
+        if (navigator.audioSession) navigator.audioSession.type = soundOn ? 'playback' : 'auto';
+    } catch (e) { /* 対応していない */ }
+}
+
 function blip(freq, dur, type = 'sine', vol = 0.045) {
     if (!state.sound) return;
     try {
+        setAudioSession(true);
         if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
         if (ac.state === 'suspended') ac.resume();
         const osc = ac.createOscillator();
@@ -168,6 +177,7 @@ function applySurround(name) {
 function applySound(on) {
     state.sound = on;
     store.set(K_SOUND, on ? 'on' : 'off');
+    setAudioSession(on);
     syncSegments();
 }
 
