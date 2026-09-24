@@ -7,6 +7,15 @@
     <meta name="description" content="1つだけ色相の違うマスを探す色彩識別テスト。あなたが見分けられる最小の色差を測定します。">
     <title>Hue Hunter | 色彩識別テスト</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0a0a'/%3E%3Crect x='6' y='6' width='9' height='9' rx='2' fill='%23f2f2f2'/%3E%3Crect x='17' y='6' width='9' height='9' rx='2' fill='%23f2f2f2'/%3E%3Crect x='6' y='17' width='9' height='9' rx='2' fill='%23f2f2f2'/%3E%3Crect x='17.5' y='17.5' width='8' height='8' rx='2' fill='none' stroke='%23f2f2f2' stroke-width='1.4'/%3E%3C/svg%3E">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://sora3141.github.io/hue-hunter/">
+    <meta property="og:title" content="Hue Hunter — 色相識別テスト">
+    <meta property="og:description" content="1枚だけ色相の違うマスを探す色彩識別テスト。あなたの目はどこまで見分けられる？">
+    <meta property="og:image" content="https://sora3141.github.io/hue-hunter/icons/og.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:locale" content="ja_JP">
+    <meta name="twitter:card" content="summary_large_image">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
@@ -166,12 +175,14 @@
                 <button id="btn-leaderboard" class="btn-link" type="button">ランキング</button>
                 <span class="title-links-sep" aria-hidden="true"></span>
                 <button id="btn-settings" class="btn-link" type="button">測定環境・設定</button>
+                <span class="title-links-sep" aria-hidden="true"></span>
+                <button id="btn-share-app" class="btn-link" type="button">シェア</button>
             </nav>
             <button id="btn-install" class="install" type="button" hidden>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M12 7.5v7m-3-3 3 3 3-3M10 18.5h4"/></svg>
                 <span><b>アプリとして追加</b><small>ホーム画面から全画面で計測できます</small></span>
             </button>
-            <p id="version">2.4.1</p>
+            <p id="version">2.5.0</p>
         </div>
     </section>
 
@@ -220,6 +231,9 @@
                     <svg class="btn-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12a7 7 0 1 1-2.05-4.95M19 4.5V8h-3.5"/></svg>
                     もう一度計測する
                 </button>
+                <button id="btn-share" class="btn btn-ghost btn-share" type="button" aria-label="結果をシェア">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M7 10H5.5A1.5 1.5 0 0 0 4 11.5v8A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H17"/></svg>
+                </button>
                 <button id="btn-peek" class="btn btn-ghost" type="button">盤面</button>
             </div>
 
@@ -266,6 +280,42 @@
             <button id="btn-install-close" class="btn btn-ghost" type="button">閉じる</button>
         </div>
     </div>
+
+    <!-- ===== シェア ===== -->
+    <div id="share-sheet" class="veil">
+        <div class="sheet sheet-bottom share" role="dialog" aria-labelledby="share-title">
+            <div class="sheet-grab" aria-hidden="true"></div>
+            <p class="setting-key" id="share-title">結果をシェア</p>
+            <figure class="share-card" id="share-card">
+                <img id="share-preview" alt="シェア用のスコアカード">
+            </figure>
+            <button id="btn-share-native" class="btn btn-primary" type="button">
+                <svg class="btn-glyph-line" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M7 10H5.5A1.5 1.5 0 0 0 4 11.5v8A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H17"/></svg>
+                共有する
+            </button>
+            <div class="share-grid">
+                <button id="btn-share-x" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" class="fill"><path d="M17.8 3h3.1l-6.8 7.7L22 21h-6.2l-4.9-6.3L5.3 21H2.2l7.2-8.3L1.9 3h6.4l4.4 5.8L17.8 3Zm-1.1 16.2h1.7L7.3 4.7H5.5l11.2 14.5Z"/></svg>
+                    <span>X</span>
+                </button>
+                <button id="btn-share-line" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4C7 4 3 7.2 3 11.2c0 3.5 3.1 6.4 7.3 7l-.5 2.6c-.1.4.3.7.7.5 1.9-1 5.6-3.3 7.6-5.6 1.2-1.3 1.9-2.8 1.9-4.5C21 7.2 17 4 12 4Z"/></svg>
+                    <span>LINE</span>
+                </button>
+                <button id="btn-share-copy" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+                    <span>コピー</span>
+                </button>
+                <button id="btn-share-save" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m-4.5-4.5L12 15l4.5-4.5M5 19.5h14"/></svg>
+                    <span>画像を保存</span>
+                </button>
+            </div>
+            <button id="btn-share-close" class="btn btn-ghost" type="button">閉じる</button>
+        </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <!-- ===== 設定シート ===== -->
     <div id="settings" class="veil">

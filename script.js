@@ -67,6 +67,7 @@ const state = {
     minDelta: null,
     lastPick: null,
     colors: null,      // 現在の盤面の { base, odd }（結果画面の見本に使う）
+    bestPair: null,    // 最小色差を識別できた盤面の { base, odd }（シェアカードに使う）
 
     timeLeft: TIME_START,
     timeCap: TIME_START,
@@ -367,6 +368,7 @@ function resetRound() {
     state.minDelta = null;
     state.lastPick = null;
     state.colors = null;
+    state.bestPair = null;
     state.over = false;
     state.peeking = false;
     state.cause = 'miss';
@@ -438,7 +440,10 @@ function drawBoard() {
 
 function onHit() {
     // いま識別できた色差を記録する（これがテストの測定結果）
-    state.minDelta = (state.minDelta === null) ? state.delta : Math.min(state.minDelta, state.delta);
+    if (state.minDelta === null || state.delta <= state.minDelta) {
+        state.minDelta = state.delta;
+        state.bestPair = state.colors;
+    }
     state.score++;
 
     state.timeCap = timeCapFor(state.score);
@@ -697,6 +702,9 @@ function openReport(isBest) {
     $('r-rank').textContent = `RANK ${g.rank} / ${GRADES.length}`;
     drawDial(state.score);
     paintSwatch();
+    // 前回のカードは破棄し、シート表示時に描き直す
+    if (shareCard) URL.revokeObjectURL(shareCard.url);
+    shareCard = null;
     $('r-delta').textContent = state.minDelta === null ? '—' : `${state.minDelta.toFixed(1)}°`;
     $('r-grid').textContent = `${state.maxN}×${state.maxN}`;
     $('r-best').textContent = pad3(state.best);
@@ -907,6 +915,242 @@ function retry() {
     setTimeout(startRound, 320);
 }
 
+// --- シェア -------------------------------------------------
+
+const SHARE_URL = 'https://sora3141.github.io/hue-hunter/';
+const SHARE_TAG = '#HueHunter';
+const CARD_W = 1080, CARD_H = 1350;   // 4:5。X・Instagram・LINE のどれでも切れにくい比率
+
+let shareKind = 'app';   // 'app' | 'result'
+let shareCard = null;    // { blob, file, url }
+
+function shareText() {
+    if (shareKind === 'result') {
+        const g = gradeFor(state.score);
+        const d = state.minDelta === null ? '' : `見分けられた最小の色差は ${state.minDelta.toFixed(1)}°。`;
+        return `Hue Hunter で ${state.score} 点、称号「${g.title}」。${d}あなたの目はどこまで見分けられる？ ${SHARE_TAG}`;
+    }
+    return `1枚だけ色相の違うマスを探す色彩識別テスト「Hue Hunter」。あなたの目はどこまで見分けられる？ ${SHARE_TAG}`;
+}
+
+async function openShare(kind) {
+    shareKind = kind;
+    const isResult = kind === 'result';
+    $('share-title').textContent = isResult ? '結果をシェア' : 'Hue Hunter をシェア';
+    setHidden($('share-card'), !isResult);
+    setHidden($('btn-share-save'), !isResult);
+    setHidden($('btn-share-native'), typeof navigator.share !== 'function');
+    showLayer($('share-sheet'), true);
+
+    // 画像はシートを開いた時点で用意しておく。共有ボタンを押してから描くと、
+    // Safari ではユーザー操作の扱いが切れて navigator.share が拒否される。
+    if (isResult && !shareCard) {
+        const img = $('share-preview');
+        img.removeAttribute('src');
+        try {
+            const blob = await renderCard();
+            const name = `hue-hunter-${pad3(state.score)}.png`;
+            shareCard = {
+                blob,
+                file: new File([blob], name, { type: 'image/png' }),
+                url: URL.createObjectURL(blob)
+            };
+            img.src = shareCard.url;
+        } catch (e) {
+            console.error('card failed', e);
+            setHidden($('share-card'), true);
+            setHidden($('btn-share-save'), true);
+        }
+    }
+}
+
+async function shareNative() {
+    const text = shareText();
+    const data = { title: 'Hue Hunter', text, url: SHARE_URL };
+    if (shareKind === 'result' && shareCard && navigator.canShare && navigator.canShare({ files: [shareCard.file] })) {
+        // 画像付きだと url を捨てるアプリがあるので本文に含める
+        data.files = [shareCard.file];
+        data.text = `${text}\n${SHARE_URL}`;
+        delete data.url;
+    }
+    try {
+        await navigator.share(data);
+    } catch (e) {
+        if (e.name !== 'AbortError') toast('共有できませんでした');
+    }
+}
+
+function shareTo(service) {
+    const text = shareText();
+    const url = service === 'x'
+        ? `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(SHARE_URL)}`
+        : `https://line.me/R/share?text=${encodeURIComponent(`${text}\n${SHARE_URL}`)}`;
+    window.open(url, '_blank', 'noopener');
+}
+
+async function copyShare() {
+    const body = `${shareText()}\n${SHARE_URL}`;
+    try {
+        await navigator.clipboard.writeText(body);
+    } catch (e) {
+        // clipboard API が使えない環境（http・古い WebView）向け
+        const ta = document.createElement('textarea');
+        ta.value = body;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+    }
+    toast('リンクをコピーしました');
+}
+
+function saveCard() {
+    if (!shareCard) return;
+    const a = document.createElement('a');
+    a.href = shareCard.url;
+    a.download = shareCard.file.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    toast('画像を保存しました');
+}
+
+let toastTimer = 0;
+function toast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('on'), 1800);
+}
+
+/**
+ * シェア用スコアカードを canvas に描く。結果画面の計器ダイヤルと同じ意匠で、
+ * 最小色差を識別できた盤面の 2 色を添える。
+ */
+async function renderCard() {
+    const MONO = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
+    const SANS = '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif';
+    try {
+        await Promise.all(['300 100px', '500 40px'].map((f) => document.fonts.load(`${f} "IBM Plex Mono"`)));
+    } catch (e) { /* フォールバックの等幅で描く */ }
+
+    const cv = document.createElement('canvas');
+    cv.width = CARD_W;
+    cv.height = CARD_H;
+    const c = cv.getContext('2d');
+    const FG = '#f2f2f2', FG2 = '#9a9a9a', FG3 = '#5c5c5c', LINE = 'rgba(255,255,255,0.14)';
+
+    c.fillStyle = '#0a0a0a';
+    c.fillRect(0, 0, CARD_W, CARD_H);
+
+    // 字間付きの 1 行（canvas の letterSpacing は Safari で未対応のため自前で送る）
+    const spaced = (text, x, y, font, color, track, align = 'center') => {
+        c.font = font;
+        c.fillStyle = color;
+        c.textBaseline = 'alphabetic';
+        const chars = [...text];
+        const w = chars.reduce((sum, ch) => sum + c.measureText(ch).width, 0) + track * (chars.length - 1);
+        let cx = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+        c.textAlign = 'left';
+        chars.forEach((ch) => { c.fillText(ch, cx, y); cx += c.measureText(ch).width + track; });
+        return w;
+    };
+
+    spaced('HUE HUNTER', CARD_W / 2, 150, `500 46px ${MONO}`, FG, 18);
+    spaced('色相識別テスト · SEASON 2', CARD_W / 2, 204, `500 24px ${SANS}`, FG3, 6);
+
+    // 計器ダイヤル（drawDial と同じ幾何を 2.6 倍で）
+    const K = 2.6, CX = CARD_W / 2, CY = 610;
+    const START = -135, SWEEP = 270;
+    const ang = (v) => (START + SWEEP * Math.min(1, v / DIAL_MAX) - 90) * Math.PI / 180;
+    const pt = (r, a) => [CX + r * K * Math.cos(a), CY + r * K * Math.sin(a)];
+    c.lineCap = 'round';
+    for (let v = 0; v <= DIAL_MAX; v++) {
+        const major = GRADES.some((g) => g.from === v);
+        const a = ang(v);
+        const [x0, y0] = pt(major ? 94 : 99, a);
+        const [x1, y1] = pt(106, a);
+        c.strokeStyle = v <= state.score ? FG : LINE;
+        c.lineWidth = major ? 5.5 : 3.2;
+        c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke();
+    }
+    c.font = `500 24px ${MONO}`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    GRADES.forEach((g, i) => {
+        const [x, y] = pt(82, ang(g.from));
+        c.fillStyle = state.score >= g.from ? FG : FG3;
+        c.fillText(String(i + 1), x, y);
+    });
+    const na = ang(state.score);
+    const [n0x, n0y] = pt(88, na), [n1x, n1y] = pt(112, na), [ndx, ndy] = pt(117, na);
+    c.strokeStyle = FG; c.lineWidth = 5;
+    c.beginPath(); c.moveTo(n0x, n0y); c.lineTo(n1x, n1y); c.stroke();
+    c.fillStyle = FG;
+    c.beginPath(); c.arc(ndx, ndy, 7, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = 'rgba(255,255,255,0.07)'; c.lineWidth = 2;
+    c.beginPath(); c.arc(CX, CY, 70 * K, 0, Math.PI * 2); c.stroke();
+
+    const g = gradeFor(state.score);
+    spaced('SCORE', CX, CY - 118, `500 22px ${MONO}`, FG3, 9);
+    c.font = `300 190px ${MONO}`;
+    c.fillStyle = FG;
+    c.textAlign = 'center';
+    c.textBaseline = 'alphabetic';
+    c.fillText(pad3(state.score), CX, CY + 62);
+    spaced(`RANK ${g.rank} / ${GRADES.length}`, CX, CY + 128, `500 22px ${MONO}`, FG3, 9);
+
+    // 称号
+    c.font = `700 76px ${SANS}`;
+    c.fillStyle = FG;
+    c.textAlign = 'center';
+    c.fillText(g.title, CX, 1010);
+
+    // 最小色差の見本と計測値
+    const pair = state.bestPair || state.colors;
+    const top = 1080, H = 120, L = 150;
+    if (pair) {
+        const rr = (x, y, w, h, r, left) => {
+            c.beginPath();
+            if (left) c.roundRect(x, y, w, h, [r, 0, 0, r]);
+            else c.roundRect(x, y, w, h, [0, r, r, 0]);
+            c.fill();
+        };
+        c.fillStyle = pair.base; rr(L, top, H, H, 20, true);
+        c.fillStyle = pair.odd;  rr(L + H, top, H, H, 20, false);
+    }
+    const tx = L + H * 2 + 44;
+    c.textAlign = 'left';
+    c.font = `500 26px ${SANS}`;
+    c.fillStyle = FG2;
+    c.fillText(state.bestPair ? '見分けられた最小の色差' : '最後の盤面の色差', tx, top + 40);
+    c.font = `400 60px ${MONO}`;
+    c.fillStyle = FG;
+    const dv = state.bestPair ? state.minDelta : state.delta;
+    c.fillText(dv === null || dv === undefined ? 'Δ —' : `Δ ${dv.toFixed(1)}°`, tx, top + 106);
+    c.textAlign = 'right';
+    c.font = `500 26px ${SANS}`;
+    c.fillStyle = FG2;
+    c.fillText('到達グリッド', CARD_W - L, top + 40);
+    c.font = `400 60px ${MONO}`;
+    c.fillStyle = FG;
+    c.fillText(`${state.maxN}×${state.maxN}`, CARD_W - L, top + 106);
+
+    // フッタ: URL と色相の帯（カードに有彩色が入るのはここと見本だけ）
+    spaced('sora3141.github.io/hue-hunter', CX, 1262, `400 24px ${MONO}`, FG3, 3);
+    const seg = 36, sw = CARD_W / seg;
+    for (let i = 0; i < seg; i++) {
+        c.fillStyle = `hsl(${(360 / seg) * i}, 80%, 50%)`;
+        c.fillRect(i * sw, CARD_H - 10, sw + 0.5, 10);
+    }
+
+    return new Promise((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error('toBlob'))), 'image/png'));
+}
+
 // --- アプリとしてインストール（PWA） -------------------------
 
 const ICON_SHARE = '<svg class="inline-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M7 10H5.5A1.5 1.5 0 0 0 4 11.5v8A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H17"/></svg>';
@@ -994,6 +1238,15 @@ bind('btn-peek', peek);
 bind('btn-peek-back', backFromPeek);
 bind('btn-resume', resume);
 bind('btn-install', install);
+bind('btn-share', () => openShare('result'));
+bind('btn-share-app', () => openShare('app'));
+bind('btn-share-native', shareNative);
+bind('btn-share-x', () => shareTo('x'));
+bind('btn-share-line', () => shareTo('line'));
+bind('btn-share-copy', copyShare);
+bind('btn-share-save', saveCard);
+bind('btn-share-close', () => showLayer($('share-sheet'), false));
+$('share-sheet').addEventListener('click', (e) => { if (e.target.id === 'share-sheet') showLayer($('share-sheet'), false); });
 bind('btn-install-close', () => showLayer($('install-sheet'), false));
 $('install-sheet').addEventListener('click', (e) => { if (e.target.id === 'install-sheet') showLayer($('install-sheet'), false); });
 bind('btn-pause', pause);
@@ -1023,7 +1276,8 @@ window.addEventListener('blur', pause);
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
-        if ($('install-sheet').classList.contains('on')) showLayer($('install-sheet'), false);
+        if ($('share-sheet').classList.contains('on')) showLayer($('share-sheet'), false);
+        else if ($('install-sheet').classList.contains('on')) showLayer($('install-sheet'), false);
         else if (el.settings.classList.contains('on')) showLayer(el.settings, false);
         else if (el.leaderboard.classList.contains('on')) showLayer(el.leaderboard, false);
         else if (state.paused && e.key === 'Escape') resume();

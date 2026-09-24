@@ -8,7 +8,7 @@
    Firebase など他のオリジンには一切触らない。
    ========================================================= */
 
-const VERSION = 'hh-2.4.1';
+const VERSION = 'hh-2.5.0';
 const SHELL = [
     './',
     './index.html',
