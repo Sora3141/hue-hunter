@@ -938,7 +938,7 @@ function retry() {
 
 // --- シェア -------------------------------------------------
 
-const SHARE_URL = 'https://sora3141.github.io/hue-hunter/';
+const SHARE_URL = 'https://t-of.github.io/hue-hunter/';
 const SHARE_TAG = '#HueHunter';
 const CARD_W = 1080, CARD_H = 1350;   // 4:5。X・Instagram・LINE のどれでも切れにくい比率
 
@@ -1162,7 +1162,7 @@ async function renderCard() {
     c.fillText(`${state.maxN}×${state.maxN}`, CARD_W - L, top + 106);
 
     // フッタ: URL と色相の帯（カードに有彩色が入るのはここと見本だけ）
-    spaced('sora3141.github.io/hue-hunter', CX, 1262, `400 24px ${MONO}`, FG3, 3);
+    spaced('t-of.github.io/hue-hunter', CX, 1262, `400 24px ${MONO}`, FG3, 3);
     const seg = 36, sw = CARD_W / seg;
     for (let i = 0; i < seg; i++) {
         c.fillStyle = `hsl(${(360 / seg) * i}, 80%, 50%)`;

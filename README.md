@@ -5,9 +5,9 @@ Firebase によるログインとランキング同期に対応しています�
 
 ## 🔗 リンク
 
-- リポジトリ: https://github.com/Sora3141/hue-hunter
-- デモ: https://sora3141.github.io/hue-hunter/
-- 制作: [T.OF...](https://sora3141.github.io/)
+- リポジトリ: https://github.com/t-of/hue-hunter
+- デモ: https://t-of.github.io/hue-hunter/
+- 制作: [T.OF...](https://t-of.github.io/)
 
 ## 遊び方
 
@@ -56,7 +56,7 @@ npx firebase-tools deploy --only firestore:rules      # firebase.json / .firebas
 ```
 
 Firebase コンソール > Firestore Database > ルール に `firestore.rules` を貼って「公開」してもよい。
-Google ログインを使うので、Authentication > 設定 > 承認済みドメイン に `sora3141.github.io` と `localhost` を入れておく。
+Google ログインを使うので、Authentication > 設定 > 承認済みドメイン に `t-of.github.io` と `localhost` を入れておく。
 
 
 ビルドやテストの手順はない（静的ファイルをそのまま配信する）。Firestore の設定は下の「Firestore」を参照。

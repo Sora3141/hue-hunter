@@ -2,16 +2,20 @@
 <html lang="ja" data-surround="dark">
 <head>
     <meta charset="UTF-8">
+    <script>/* sora3141.github.io から移ってきた記録を受け取る。ponytail: 2027-09 ごろに消す */
+    (function(){var m=location.hash.match(/^#tof-move=([^&]*)&?(.*)$/);if(!m)return;
+    try{var d=JSON.parse(decodeURIComponent(m[1]));for(var k in d)if(localStorage.getItem(k)===null)localStorage.setItem(k,d[k]);}catch(e){}
+    history.replaceState(null,'',location.pathname+location.search+(m[2]?'#'+m[2]:''));})();</script>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#0a0a0a" id="meta-theme-color">
     <meta name="description" content="1つだけ色相の違うマスを探す色彩識別テスト。あなたが見分けられる最小の色差を測定します。">
     <title>Hue Hunter — 色相識別テスト</title>
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Hue Hunter">
-    <meta property="og:url" content="https://sora3141.github.io/hue-hunter/">
+    <meta property="og:url" content="https://t-of.github.io/hue-hunter/">
     <meta property="og:title" content="Hue Hunter — 色相識別テスト">
     <meta property="og:description" content="1枚だけ色相の違うマスを探す色彩識別テスト。あなたの目はどこまで見分けられる？">
-    <meta property="og:image" content="https://sora3141.github.io/hue-hunter/icons/og.png">
+    <meta property="og:image" content="https://t-of.github.io/hue-hunter/icons/og.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:locale" content="ja_JP">
