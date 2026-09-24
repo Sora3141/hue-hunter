@@ -1,7 +1,7 @@
 'use strict';
 
 /* =========================================================
-   Hue Hunter — Service Worker
+   DELTA HUE — Service Worker（id とキャッシュ名は旧名の hue-hunter のまま）
    インストール可能にするための最小構成＋オフライン起動。
    自前のファイルは network-first（更新をすぐ反映し、圏外ではキャッシュで動く）。
    Google Fonts だけ stale-while-revalidate で持つ。
@@ -10,7 +10,7 @@
 
 // キャッシュ名はアプリ名で始める（同じオリジンの他アプリのキャッシュと区別するため）
 const PREFIX = 'hue-hunter-';
-const VERSION = PREFIX + '2.5.2'; // index.html の #version と揃える
+const VERSION = PREFIX + '2.5.3'; // index.html の #version と揃える
 const LEGACY = /^hh-\d/; // 以前このアプリが使っていたキャッシュ名（hh-2.5.0 など）
 const SHELL = [
     './',

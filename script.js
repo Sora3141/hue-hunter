@@ -1,7 +1,7 @@
 'use strict';
 
 /* =========================================================
-   Hue Hunter — Season 2 / 色相識別テスト
+   DELTA HUE — Season 2 / 見分けられる色の差を測る（id・保存キーは旧名 Hue Hunter のまま）
    ルール: 1枚だけ色相の違うタイルを選ぶ。正解で残り時間が回復し、
    スコアに応じてグリッドが拡大、色差が縮む。誤答か時間切れで終了。
    ========================================================= */
@@ -939,7 +939,7 @@ function retry() {
 // --- シェア -------------------------------------------------
 
 const SHARE_URL = 'https://t-of.github.io/hue-hunter/';
-const SHARE_TAG = '#HueHunter';
+const SHARE_TAG = '#DeltaHue';
 const CARD_W = 1080, CARD_H = 1350;   // 4:5。X・Instagram・LINE のどれでも切れにくい比率
 
 let shareKind = 'app';   // 'app' | 'result'
@@ -949,15 +949,15 @@ function shareText() {
     if (shareKind === 'result') {
         const g = gradeFor(state.score);
         const d = state.minDelta === null ? '' : `見分けられた最小の色差は ${state.minDelta.toFixed(1)}°。`;
-        return `Hue Hunter で ${state.score} 点、称号「${g.title}」。${d}あなたの目はどこまで見分けられる？ ${SHARE_TAG}`;
+        return `DELTA HUE で ${state.score} 点、称号「${g.title}」。${d}あなたの目はどこまで見分けられる？ ${SHARE_TAG}`;
     }
-    return `1枚だけ色相の違うマスを探す色彩識別テスト「Hue Hunter」。あなたの目はどこまで見分けられる？ ${SHARE_TAG}`;
+    return `1枚だけ色相の違うマスを探す色彩識別テスト「DELTA HUE」。あなたの目はどこまで見分けられる？ ${SHARE_TAG}`;
 }
 
 async function openShare(kind) {
     shareKind = kind;
     const isResult = kind === 'result';
-    $('share-title').textContent = isResult ? '結果をシェア' : 'Hue Hunter をシェア';
+    $('share-title').textContent = isResult ? '結果をシェア' : 'DELTA HUE をシェア';
     setHidden($('share-card'), !isResult);
     setHidden($('btn-share-save'), !isResult);
     setHidden($('btn-share-native'), typeof navigator.share !== 'function');
@@ -970,7 +970,7 @@ async function openShare(kind) {
         img.removeAttribute('src');
         try {
             const blob = await renderCard();
-            const name = `hue-hunter-${pad3(state.score)}.png`;
+            const name = `delta-hue-${pad3(state.score)}.png`;
             shareCard = {
                 blob,
                 file: new File([blob], name, { type: 'image/png' }),
@@ -987,7 +987,7 @@ async function openShare(kind) {
 
 async function shareNative() {
     const text = shareText();
-    const data = { title: 'Hue Hunter', text, url: SHARE_URL };
+    const data = { title: 'DELTA HUE', text, url: SHARE_URL };
     if (shareKind === 'result' && shareCard && navigator.canShare && navigator.canShare({ files: [shareCard.file] })) {
         // 画像付きだと url を捨てるアプリがあるので本文に含める
         data.files = [shareCard.file];
@@ -1081,8 +1081,8 @@ async function renderCard() {
         return w;
     };
 
-    spaced('HUE HUNTER', CARD_W / 2, 150, `500 46px ${MONO}`, FG, 18);
-    spaced('色相識別テスト · SEASON 2', CARD_W / 2, 204, `500 24px ${SANS}`, FG3, 6);
+    spaced('DELTA HUE', CARD_W / 2, 150, `500 46px ${MONO}`, FG, 18);
+    spaced('見分けられる色の差を測る · SEASON 2', CARD_W / 2, 204, `500 24px ${SANS}`, FG3, 6);
 
     // 計器ダイヤル（drawDial と同じ幾何を 2.6 倍で）
     const K = 2.6, CX = CARD_W / 2, CY = 610;

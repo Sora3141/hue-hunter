@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "Hue Hunter — 色相識別テスト",
-  "short_name": "Hue Hunter",
+  "name": "DELTA HUE — 見分けられる色の差を測る",
+  "short_name": "DELTA HUE",
   "description": "1つだけ色相の違うマスを探す色彩識別テスト。見分けられる最小の色差を測定します。",
   "lang": "ja",
   "start_url": "./",
