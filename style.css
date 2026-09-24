@@ -80,6 +80,9 @@
 
 html, body { height: 100%; }
 
+/* Safari 26 は上下バーの色を html から取るので、body と同じ色を html にも塗る */
+html { background: var(--bg); }
+
 body {
     margin: 0;
     padding-top: env(safe-area-inset-top);
@@ -788,6 +791,24 @@ body:not([data-mode="play"]) #btn-pause { visibility: hidden; }
     opacity: 0.6;
     user-select: none;
 }
+
+/* 制作元（ポータル）へのリンク */
+.credit {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    color: var(--fg-3);
+}
+.credit a {
+    display: inline-block;
+    padding: 6px 2px;
+    color: var(--fg-2);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line);
+    line-height: 1.2;
+}
+.credit a:hover { color: var(--fg); border-color: var(--fg-3); }
 
 /* --- 計測結果 --- */
 .report-inner { gap: 12px; padding-bottom: calc(40px + env(safe-area-inset-bottom)); }

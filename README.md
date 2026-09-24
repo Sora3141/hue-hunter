@@ -7,6 +7,7 @@ Firebase によるログインとランキング同期に対応しています�
 
 - リポジトリ: https://github.com/Sora3141/hue-hunter
 - デモ: https://sora3141.github.io/hue-hunter/
+- 制作: [T.OFO](https://sora3141.github.io/)
 
 ## テストの内容（Season 2 / Time Attack）
 

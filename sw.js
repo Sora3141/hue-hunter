@@ -8,7 +8,10 @@
    Firebase など他のオリジンには一切触らない。
    ========================================================= */
 
-const VERSION = 'hh-2.5.0';
+// キャッシュ名はアプリ名で始める（同じオリジンの他アプリのキャッシュと区別するため）
+const PREFIX = 'hue-hunter-';
+const VERSION = PREFIX + '2.5.1';
+const LEGACY = /^hh-\d/; // 以前このアプリが使っていたキャッシュ名（hh-2.5.0 など）
 const SHELL = [
     './',
     './index.html',
@@ -29,7 +32,9 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
     e.waitUntil(
         caches.keys()
-            .then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
+            .then((keys) => Promise.all(keys
+                .filter((k) => (k.startsWith(PREFIX) || LEGACY.test(k)) && k !== VERSION)
+                .map((k) => caches.delete(k))))
             .then(() => self.clients.claim())
     );
 });
