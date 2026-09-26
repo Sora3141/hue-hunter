@@ -79,7 +79,7 @@
 [hidden] { display: none !important; }
 
 /* 拡大を禁止しない代わりに、操作する場所ではダブルタップ拡大と長押し選択だけ止める */
-#app, button { touch-action: manipulation; }
+html { touch-action: manipulation; }
 #app { -webkit-user-select: none; user-select: none; }
 
 html, body { height: 100%; }
