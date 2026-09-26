@@ -59,7 +59,7 @@ Firebase コンソール > Firestore Database > ルール に `firestore.rules` 
 Google ログインを使うので、Authentication > 設定 > 承認済みドメイン に `t-of.github.io` と `localhost` を入れておく。
 
 
-ビルドやテストの手順はない（静的ファイルをそのまま配信する）。Firestore の設定は下の「Firestore」を参照。
+ビルドやテストの手順はない（静的ファイルをそのまま配信する）。保存するデータの形は下の「データ」を参照。
 
 > `color-test` リポジトリは本ゲームのローカル版（"Ultimate"）です。
 
@@ -140,12 +140,34 @@ Google ログインを使うので、Authentication > 設定 > 承認済みド�
 - HTML / CSS / Vanilla JavaScript（ビルド不要・GitHub Pages で直接配信）
 - **Firebase**（Google 認証・Firestore によるスコアのクラウド同期）
 
-## Firestore
+## データ
+
+### 端末内（localStorage）
+
+| キー | 中身 |
+|---|---|
+| `hueHunter_s2_best` | シーズン 2 のベストスコア（整数の文字列） |
+| `hueHunter_v5_name` | ランキングに出す名前（8 文字まで） |
+| `hueHunter_sound` | 音。`on` / `off` |
+| `hueHunter_surround` | 周辺色。`dark` / `gray` / `light`（なければ `dark`） |
+
+### Firestore
 
 | コレクション | 用途 |
 |---|---|
-| `rankings` | シーズン1（旧ルール）のアーカイブ。読み取り専用 |
-| `rankings_v2` | シーズン2（現行）のランキング。`name` / `score` / `minDelta` / `season` / `timestamp` |
+| `rankings` | シーズン 1（旧ルール）のアーカイブ。読み取り専用 |
+| `rankings_v2` | シーズン 2（現行）のランキング |
 
-セキュリティルールは [firestore.rules](firestore.rules) を Firebase コンソールに貼り付けて公開する。
-**未設定だと `rankings_v2` への書き込みが `permission-denied` で失敗する。**
+`rankings_v2/{uid}` — id は Firebase Authentication の uid。1 人 1 件で、ベストを更新したときに上書きする。
+
+| 項目 | 型 | 範囲 | 意味 |
+|---|---|---|---|
+| `name` | string | 1〜8 文字 | 表示名 |
+| `score` | int | 0〜500 | ベストスコア（並び順に使う） |
+| `minDelta` | number | 0〜360 | その回で見分けられた最小の色相差（°、小数 1 桁） |
+| `season` | int | 2 だけ | シーズン番号（版番号を兼ねる） |
+| `timestamp` | timestamp | サーバーの時刻だけ | 書いた時刻 |
+
+- 読む: だれでも（ランキングの表示）。書く: ログインした本人の文書だけ。
+- この形を確かめているのは [firestore.rules](firestore.rules)。形を変えるときは、この表・`script.js` の `saveRecord`・ルールを同じコミットで直し、ルールを Firebase に公開する（上の「Firestore のルールを公開する」）。
+- シーズンを変えるときは新しいコレクション（`rankings_v3`）を作り、古いものは読み取り専用で残す。
